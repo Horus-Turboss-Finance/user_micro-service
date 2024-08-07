@@ -1,6 +1,6 @@
 {
   "name": "user_micro-service",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "Micro-service gérant les utilisateurs du projet Cash-Eyes ",
   "main": "./build/index.js",
   "scripts": {
