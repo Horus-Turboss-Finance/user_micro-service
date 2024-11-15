@@ -1,195 +1,193 @@
+import path from "path";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import User from './userModel';
-import { emailCheck } from 'checks';
-import { stringContraint } from 'constraint';
+import { existsSync } from "fs";
 import { catchSync } from '../../middleware/catchAsync';
-import { sendTokenCookie } from '../../utils/sendCookie';
 import { NextFunction, Request, Response } from 'express';
-import { ResponseException } from '../../utils/responseException';
-import { sendSupportMailResetPassword } from "../../utils/sendMail";
-import { EmailType, errorCode, IUser, SuccessCode, Request as userRequest } from '../../config/types';
+import { ResponseException, utils, params } from "packages";
 
-import { APPCRITIC } from "../../config/envLoader";
+let { stringContraint, mongooseMessageErrorFormator } = utils
+let { env, loadEnv } = params
+
+env = loadEnv(path.resolve(__dirname, "../../../../.env"))
 
 // Signup User
-// ⚠️⚠️  à modif au prochain service (communication between micro-service) ⚠️⚠️
-// mail welcome
 export const signupUser = catchSync(async(req : Request, res : Response, next : NextFunction) => {
-    let { email } = req.body;
-    const { username, password } = req.body;
+    let { email, username, password } = req.body;
+    if(!email || !username || !password) throw new ResponseException("Certains champs sont manquant").BadRequest()
 
-    if(email) email = email.toLowerCase()
-    const user = await User.findOne({
-        $or: [{ email }, { username }]
-    });
+    try{
+        const validateCheck : any = new User({
+            email : `${email}`.toLowerCase(), 
+            password, 
+            username
+        });
 
-    if(user){
-        if(user.username === username) throw new ResponseException(errorCode.BadRequest, "Pseudo déjà existant")
-        else throw new ResponseException(errorCode.BadRequest, "Email invalide")
+        const error = validateCheck.validateSync();
+        if(error) throw error;
+
+        await validateCheck.save()
+
+        const token = await validateCheck.generateToken();
+        
+        let response = JSON.stringify(toJsonUserProperty(validateCheck, token))
+        throw new ResponseException(response).Success()
+
+    }catch(e : any) {
+        if(e.name === "ValidationError"){
+            if(e.errors.email){
+                throw new ResponseException(mongooseMessageErrorFormator(e.errors.email.message, e.errors.email.value, "Email", "email")).BadRequest()
+            }else if(e.errors.username){
+                throw new ResponseException(mongooseMessageErrorFormator(e.errors.username.message, e.errors.username.value, "Username", "string")).BadRequest()
+            }else if(e.errors.password){
+                throw new ResponseException(mongooseMessageErrorFormator(e.errors.password.message, e.errors.password.value, "Password", "string")).BadRequest()
+            }
+        }else if(e.name === 'MongoServerError' && e.code === 11000) {
+            throw new ResponseException("Le pseudo ou l'email sont déjà utilisé").BadRequest()
+        }
+
+        throw e
     }
-
-    if(!stringContraint(username, 2, 20)) throw new ResponseException(errorCode.BadRequest, "Le pseudo doit contenir entre 2 et 20 caractères.")
-    if(!stringContraint(password, 4)) throw new ResponseException(errorCode.BadRequest, "Le mot de passe doit contenir au minimum 4 caractères.")
-    if(!emailCheck(email)) throw new ResponseException(errorCode.BadRequest, "Email invalide")
-
-    await User.create({
-        email,
-        password,
-        username
-    })
-
-    const userSecure = await User.findOne({ email })
-    
-    sendTokenCookie(userSecure, res, next)
+    /* TODO */
+    /* pour les futures version -> Ajouter la collecte de l'ip pour prévenir des bans. */
+    /* lorsque mail service is created -> Ajouter l'envoie d'un mail de bienvenue */
 })  
 
 // Login User
-// ⚠️⚠️ à modif au prochain service (communication between micro-service) ⚠️⚠️
-// Si co nouvelle ip -> email new co
 export const loginUser = catchSync(async(req : Request, res : Response, next : NextFunction) => {
-    const { userId, password } = req.body;
+    const { identifiant, password } = req.body;
     let email;
-    if(userId) email = userId.toLowerCase()
+    if(identifiant) email = identifiant.toLowerCase()
 
-    const user = await User.findOne({
-        $or: [{ email: email }, { username: userId }]
+    const user: any  = await User.findOne({
+        $or: [{ email: email }, { username: identifiant }]
     }).select("+password");
 
-    if (!user || !userId || !password) {
-        const pass = await bcrypt.compare("lol", await bcrypt.genSaltSync());
-        if(!pass) throw new ResponseException(errorCode.Unauthorized, "identifiant ou mot de passe incorrect")
-        else throw new ResponseException(errorCode.Unauthorized, "identifiant ou mot de passe incorrect")
+    if (!user || !identifiant || !password) {
+        await bcrypt.compare("lol", bcrypt.genSaltSync());
+        
+        throw new ResponseException("identifiant ou mot de passe incorrect").Unauthorized()
     }
     
     const isPasswordMatched = await user.comparePassword(password);
 
     if (!isPasswordMatched) {
-        throw new ResponseException(errorCode.Unauthorized, "identifiant ou mot de passe incorrect")
+        throw new ResponseException("identifiant ou mot de passe incorrect").Unauthorized()
     }
-    
-    const userSecure = await User.findOne({
-        $or: [{ email: email }, { username: userId }]
-    })
-    sendTokenCookie(userSecure, res, next)
+
+    const token = await user.generateToken();
+
+    let response = JSON.stringify(toJsonUserProperty(user, token))
+    throw new ResponseException(response).Success()
+
+    /* TODO */
+    /* pour les futures version -> Ajouter la collecte de l'ip pour prévenir des bans. */
+    /* lorsque mail service is created -> Ajouter l'envoie d'un mail de loggin avec un nouvel ip si nouvel ip. */
 })
 
-// // Logout User
-// // ⚠️⚠️ à mettre dans l'API GATEWAY ⚠️⚠️
-// export const logoutUser = catchSync(async(req : Request, res : Response, next : NextFunction) => {
-//     res.cookie('token', null, {
-//         expires: new Date(),
-//         httpOnly: true,
-//     });
-
-//     throw new ResponseException(SuccessCode.Success, "Déconnecté")
-// });
-
 // Get User Details --Logged In User
-/* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-export const getAccountDetails = catchSync(async(req : userRequest) => { 
-    throw new ResponseException(SuccessCode.Success, JSON.stringify(req.user))
-});
+export const getAccountDetails = catchSync(async(req : any) => { 
+    let user = req.user
 
-// Get User Details
-export const getUserDetails = catchSync(async(req : Request ) => {
-    const { username } = req.body
-    const user = await User.findOne({ username })
-
-    if(!user) throw new ResponseException(errorCode.NotFound, 'Aucun utilisateur trouvé')
-    throw new ResponseException(SuccessCode.Success, JSON.stringify(user))
+    let response = JSON.stringify(toJsonUserProperty(user))
+    throw new ResponseException(response).Success()
 });
 
 // Get User Details By Id
 export const getUserDetailsById = catchSync(async(req : Request) => {
-    const { id } = req.body
-    if (!id || (id && !id.match(/^[0-9a-fA-F]{24}$/))) throw new ResponseException(errorCode.BadRequest, 'Identifiant recherché invalide')
+    const { id } : any = req.query
+    if (!id || (id && !id.match(/^[0-9a-fA-F]{24}$/))) throw new ResponseException('Identifiant recherché invalide').BadRequest()
 
-    const user = await User.findById(id)
+    const user : any = await User.findById(id)
 
-    if(!user) throw new ResponseException(errorCode.NotFound, 'Aucun utilisateur trouvé')
-    throw new ResponseException(SuccessCode.Success, JSON.stringify(user))
+    if(!user) throw new ResponseException('Aucun utilisateur trouvé').NotFound()
+
+    let response = JSON.stringify(toJsonUserProperty(user))
+    throw new ResponseException(response).Success()
 });
 
-// Get All Users
-/* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-export const getAllUsers = catchSync(async(req : userRequest) => {
+// Get All Users -- TEMPORALY DISABEL --
+export const getAllUsers = catchSync(async(req : any) => {
     const users = await User.find();
 
-    const suggestedUsers = users.filter((u : IUser) => {
-        if(!u.followers) throw new ResponseException(errorCode.NotFound, 'Aucune personne n\'est disponible')
+    const suggestedUsers = users.filter((u : any) => {
+        if(!u.followers) throw new ResponseException('Aucune personne n\'est disponible').NotFound()
 
         return !u.followers.includes(`${req.user._id}`) && u._id.toString() !== req.user._id.toString()
     }).slice(-5)
 
-    throw new ResponseException(SuccessCode.Success, JSON.stringify(suggestedUsers))
+    suggestedUsers.map((u : any) => toJsonUserProperty(u))
+    throw new ResponseException(JSON.stringify(suggestedUsers)).Success()
 });
 
 // Update Password
-// ⚠️⚠️ à modif au prochain service (communication between micro-service) ⚠️⚠️
-// envoyé mail au modif password et laisser accès temporaire (48h si c'est pas lui)
-/* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-export const updatePassword = catchSync(async(req : userRequest, res : Response, next : NextFunction) => {
+export const updatePassword = catchSync(async(req : any) => {
     const { oldPassword, newPassword } = req.body;
 
-    const user = await User.findById(req.user._id).select("+password");
-    if(!user) throw new ResponseException(errorCode.Forbidden, "Identifiant invalides")
+    const user : any = req.user;
+    if(!user) throw new ResponseException("Identifiant invalides").Unauthorized()
 
     const isPasswordMatched = await user.comparePassword(oldPassword);
 
-    if (!isPasswordMatched) throw new ResponseException(errorCode.Unauthorized, "Identifiant invalides")
-
-    if(!stringContraint(newPassword, 4)) throw new ResponseException(errorCode.BadRequest, "Le mot de passe doit contenir au minimum 4 caractères.")
+    if (!isPasswordMatched) throw new ResponseException("Identifiant invalides").Unauthorized()
+    if(!stringContraint(newPassword, 4)) throw new ResponseException("Le mot de passe doit contenir au minimum 4 caractères.").BadRequest()
 
     user.password = newPassword;
     await user.save();
     
-    sendTokenCookie(req.user, res, next);
+    const token = await user.generateToken();
+
+    let response = JSON.stringify(toJsonUserProperty(user, token))
+    throw new ResponseException(response).Success()
+    // TODO
+    /* Envoi d'un mail lors de la modif avec un lien permettant de signaler que la démarche ne vient pas de l'utilisateur (48h valid) */
 });
 
 // Update Profile
-// ⚠️⚠️ à modif à prochaine route (pp gestion) ⚠️⚠️
-/* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-export const updateProfile = catchSync(async(req : userRequest) => { 
-    const { username, bio } = req.body;
-    let { email } = req.body;
+export const updateProfile = catchSync(async(req : any) => { 
+    let { username, bio, email } = req.body;
 
     if(email) email = email.toLowerCase()
+
     const newUserData = {
         username,
         bio,
         email,
     }
 
-    const userExists = await User.find({
-        $or: [{ email }, { username }]
-    });
+    try{
+        let validateCheck : any = await User.findByIdAndUpdate(req.user._id, newUserData, {
+            new: true,
+            runValidators: true,
+            useFindAndModify: true,
+        });
+        
+        if(!validateCheck) throw new ResponseException("Aucun utilisateur trouvé").NotFound()
+        const token = await validateCheck.generateToken();
 
-    if (userExists[0]){
-        for(const userE of userExists){
-            if(userE._id.toString() !== req.user._id.toString()) throw new ResponseException(errorCode.BadRequest, "Email ou pseudo déjà existant")
+        let response = JSON.stringify(toJsonUserProperty(validateCheck, token))
+        throw new ResponseException(response).Success()
+    }catch(e : any){
+        if(e.name === "ValidationError"){
+            if(e.errors.email){
+                throw new ResponseException(mongooseMessageErrorFormator(e.errors.email.message, e.errors.email.value, "Email", 'email')).BadRequest()
+            }else if(e.errors.username){
+                throw new ResponseException(mongooseMessageErrorFormator(e.errors.username.message, e.errors.username.value, "Username", "string")).BadRequest()
+            }else if(e.errors.password){
+                throw new ResponseException(mongooseMessageErrorFormator(e.errors.password.message, e.errors.password.value, "Password", "string")).BadRequest()
+            }
+        }else if(e.name === 'MongoServerError' && e.code === 11000) {
+            throw new ResponseException("Le pseudo ou l'email sont déjà existant").BadRequest()
         }
-    } 
-    
-    if(username && !stringContraint(username, 2, 20)) throw new ResponseException(errorCode.BadRequest, "Le pseudo doit contenir entre 2 et 20 caractères.")
-    if(bio && !stringContraint(bio, 1, 250)) throw new ResponseException(errorCode.BadRequest, "La bio ne peut contenir plus de 250 caractères.")
-    if(email && !emailCheck(email)) throw new ResponseException(errorCode.BadRequest, "Email invalide")
 
-
-    await User.findByIdAndUpdate(req.user._id, newUserData, {
-        new: true,
-        runValidators: true,
-        useFindAndModify: true,
-    });
-
-    throw new ResponseException(SuccessCode.Success, "Profil bien modifié")
+        throw e
+    }
 });
 
 // Delete Profile  
-/* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-export const deleteProfile = catchSync(async(req : userRequest, res : Response) => {
-    const user = await User.findById(req.user._id);
-    if(!user) throw new ResponseException(errorCode.Forbidden, "Identifiant invalides")
+export const deleteProfile = catchSync(async(req : any, res : Response) => {
+    let user = req.user
 
     const followers = user.followers;
     const following = user.following;
@@ -198,16 +196,13 @@ export const deleteProfile = catchSync(async(req : userRequest, res : Response) 
     // delete post & user images
     await user.deleteOne();
 
-    // // ⚠️⚠️ à mettre dans l'API GATEWAY ⚠️⚠️
-    res.cookie('token', null, {
-        expires: new Date(Date.now()),
-        httpOnly: true,
-    });
+    // TODO
+    /* LAISSER LA POSSIBILITER DE SE CONNECTER PENDANT 30J */
 
     if(followers){
         for (let i = 0; i < followers.length; i++) {
             const follower = await User.findById(followers[i]);
-            if(!follower) throw new ResponseException(errorCode.UnknownError, "Une erreur est survenue veillez réessayer plus tard.")
+            if(!follower) throw new ResponseException("Une erreur est survenue veillez réessayer plus tard.").UnknownError()
     
             if(follower.following){
                 const index = follower.following.indexOf(userId);
@@ -221,7 +216,7 @@ export const deleteProfile = catchSync(async(req : userRequest, res : Response) 
     if(following){
         for (let i = 0; i < following.length; i++) {
             const follows = await User.findById(following[i]);
-            if(!follows) throw new ResponseException(errorCode.UnknownError, "Une erreur est survenue veillez réessayer plus tard.")
+            if(!follows) throw new ResponseException("Une erreur est survenue veillez réessayer plus tard.").UnknownError()
     
             if(follows.followers){
                 const index = follows.followers.indexOf(userId);
@@ -232,20 +227,19 @@ export const deleteProfile = catchSync(async(req : userRequest, res : Response) 
         }
     }
 
-    throw new ResponseException(SuccessCode.Success, 'Utilisateur supprimé')
+    throw new ResponseException('Utilisateur supprimé').Success()
 });
 
-// Follow | Unfollow User
-/* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-export const followUser = catchSync(async(req : userRequest) => {
-    if(req.body.id == req.user._id) throw new ResponseException(errorCode.BadRequest, "Cannot follow yourself")
-    if (req.body.id && !req.body.id.match(/^[0-9a-fA-F]{24}$/)) throw new ResponseException(errorCode.BadRequest, "Identifiant fournit invalide")
+// Follow | Unfollow User -- TEMPORALY DISABLE --
+export const followUser = catchSync(async(req : any) => {
+    if(req.body.id == req.user._id) throw new ResponseException("Cannot follow yourself")
+    if (req.body.id && !req.body.id.match(/^[0-9a-fA-F]{24}$/)) throw new ResponseException("Identifiant fournit invalide")
 
     const userToFollow = await User.findById(req.body.id);
-    const loggedInUser = await User.findById(req.user._id);
+    const loggedInUser = req.user;
 
-    if (!userToFollow || !userToFollow.followers) throw new ResponseException(errorCode.BadRequest, "Aucun utilisateur fournit")
-    if (!loggedInUser || !loggedInUser.following) throw new ResponseException(errorCode.Unauthorized, "Identifiant invalides")
+    if (!userToFollow || !userToFollow.followers) throw new ResponseException("Aucun utilisateur fournit").BadRequest()
+    if (!loggedInUser || !loggedInUser.following) throw new ResponseException("Identifiant invalides").Unauthorized()
 
     if (loggedInUser.following.includes(userToFollow._id)) {
         const followingIndex = loggedInUser.following.indexOf(userToFollow._id);
@@ -257,67 +251,67 @@ export const followUser = catchSync(async(req : userRequest) => {
         await loggedInUser.save();
         await userToFollow.save();
 
-        throw new ResponseException(SuccessCode.Success, "Utilisateur désabonné")
+        throw new ResponseException("Utilisateur désabonné").Success()
     } else {
         loggedInUser.following.push(userToFollow._id);
         userToFollow.followers.push(loggedInUser._id);
+
         await loggedInUser.save();
         await userToFollow.save();
 
-        throw new ResponseException(SuccessCode.Success, "Utilisateur abonné")
+        throw new ResponseException("Utilisateur abonné").Success()
     }
 });
 
-// Forgot Password
-// ⚠️⚠️ à modif au prochain service (communication between micro-service) ⚠️⚠️
-// envoyé mail au modif password et laisser accès temporaire (48h si c'est pas lui)
-/* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+// Forgot Password -- TEMPORALY DISABLE --
 export const forgotPassword = catchSync(async(req : Request, res : Response, next :NextFunction) => {
     let { email } = req.body
 
     if(email) email = email.toLowerCase()
 
-    const user = await User.findOne({ email: email });
-    if (!user) throw new ResponseException(errorCode.NotFound, "Utilisateur introuvable")
+    const user : any = await User.findOne({ email: email });
+    if (!user) throw new ResponseException("Utilisateur introuvable").NotFound()
 
     const resetPasswordToken = await user.getResetPassword();
     await user.save();
 
-    const resetPasswordUrl = `https://${APPCRITIC.URLAPP}/password/reset/${resetPasswordToken}`;
+    // -- Pour l'instant je n'ai pas d'accès à l'url cashey.es ni au https; donc il m'est impossible d'avoir un bon retour -- //
+    // const resetPasswordUrl = `https://cashey.es/password/reset/${resetPasswordToken}`;
+    const resetPasswordUrl = `http://217.0.0.1/password/reset/${resetPasswordToken}`;
 
     try {
+        // TODO
         // ⚠️⚠️ à modif au prochain service (communication between micro-service) ⚠️⚠️
-        await sendSupportMailResetPassword({
-            email: email,
-            templateId: EmailType.ForgotPassword,
-            data: {
-                reset_url: resetPasswordUrl
-            }
-        });
+        // sendSupportMailResetPassword({
+        //     email: email,
+        //     templateId: EmailType.ForgotPassword,
+        //     data: {
+        //         reset_url: resetPasswordUrl
+        //     }
+        // });
 
-        next(new ResponseException(SuccessCode.Success, `Email sent to ${email}`))
-    } catch (err : any) { /* eslint-disable-line @typescript-eslint/no-explicit-any */
+        throw new ResponseException(`Email sent to ${email}`).Success()
+    } catch (err : any) {
+        next(err)
         user.resetPassword = undefined;
         user.resetPasswordExpiry = undefined;
 
         await user.save({ validateBeforeSave: false });
-        throw err
     }
-    
 });
 
-// Reset Password
+// Reset Password -- TEMPORALY DISABLE --
 export const resetPassword = catchSync(async(req : Request, res : Response, next : NextFunction) => {
     const resetPassword = crypto.createHash("sha256").update(req.params.token).digest("hex");
 
-    const user = await User.findOne({
+    const user : any = await User.findOne({
         resetPassword,
         resetPasswordExpiry: { $gt: Date.now() }
     });
 
-    if (!user) throw new ResponseException(errorCode.NotFound, "Liens invalide")
+    if (!user) throw new ResponseException("Liens invalide").NotFound()
 
-    if(!stringContraint(req.body.password, 4)) throw new ResponseException(errorCode.BadRequest, "Le mot de passe doit contenir au minimum 4 caractères.")
+    if(!stringContraint(req.body.password, 4)) throw new ResponseException("Le mot de passe doit contenir au minimum 4 caractères.").BadRequest()
 
 
     user.password = req.body.password;
@@ -326,23 +320,61 @@ export const resetPassword = catchSync(async(req : Request, res : Response, next
 
     await user.save();
 
-    const userSecure = await User.findById(user._id)
-    sendTokenCookie(userSecure, res, next);
+    const token = await user.generateToken();
+
+    let response = JSON.stringify(toJsonUserProperty(user, token))
+    throw new ResponseException(response).Success()
 });
 
-// User Search
-export const searchUsers = catchSync(async(req : Request) => {
-    if(!req.body.keyword) throw new ResponseException(errorCode.BadRequest, "Aucune nom fournit")
+// User Avatar Search
+export const searchAvatarUserById = catchSync(async(req : Request, res : Response) => {
+    const { id } : any = req.query
+    if (!id || (id && !id.match(/^[0-9a-fA-F]{24}$/))) throw new ResponseException('Identifiant recherché invalide').BadRequest()
 
-    if(!stringContraint(req.body.keyword, 4)) throw new ResponseException(errorCode.BadRequest, 'La recherche doit faire au minimum 4 caractères')
+    const user = await User.findById(id)
 
+    if(!user) throw new ResponseException('Aucun utilisateur trouvé').NotFound();
 
-    const users = await User.find({
-        username: {
-            $regex: req.body.keyword,
-            $options: "i",
-        }
-    });
+    if(user.avatar == "/avatars/default.jpg") return res.sendFile(path.resolve(__dirname, '../../../picture/default/default.jpg'));
 
-    throw new ResponseException(SuccessCode.Success, JSON.stringify(users))
+    let fileName = user.avatar
+    fileName = fileName.replace("/avatars/", "")
+
+    const pathFile = path.resolve(__dirname, '../../../picture/user/' + fileName)
+
+    /* le fichier n'existe pas */
+    if(!existsSync(pathFile)) throw new ResponseException("Pas de photo de profile trouvé").NotFound()
+
+    /* renvoit le fichier au client */
+    res.sendFile(pathFile)
 });
+
+export const pingedByAd = catchSync(async(req : Request) =>{
+    throw new ResponseException("Service en ligne").Success()
+})
+
+const toJsonUserProperty = (user : any, token ?: string) => {
+    let { avatar, username, bio, followers, following, _id } = user
+
+    if(!token) return {
+        followers,
+        following,
+        id : _id,
+        username,
+        // avatar : `127.0.0.1:1000${avatar}`, TODO A MODIF + TARD
+        avatar : `http://127.0.0.1:1000${avatar}`,
+        bio,
+    }
+
+
+    return {
+        followers,
+        following,
+        id : _id,
+        username,
+        // avatar : `127.0.0.1:1000${avatar}`, TODO A MODIF + TARD
+        avatar : `http://127.0.0.1:1000${avatar}`,
+        token,
+        bio,
+    }
+}

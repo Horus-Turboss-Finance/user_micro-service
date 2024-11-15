@@ -1,31 +1,40 @@
+import path from "path";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import { Schema, model } from 'mongoose';
-import { APPCRITIC } from '../../config/envLoader';
-import { IUser, IUserMethods, tokenData, UserModel } from '../../config/types';
+import { params, utils } from "packages"
 
+let { env, loadEnv } = params
 
-const userSchema = new Schema<IUser, UserModel, IUserMethods>({
+env = loadEnv(path.resolve(__dirname, "../../../../.env"))
+
+const userSchema = new Schema({
     avatar:  {
         type: String,
         default: "/avatars/default.jpg"
     },
     email: { 
         type: String, 
-        required: true, 
+        required: [true, "L'email est obligatoire"],
+        validate: {
+            validator: function(mail : any) {
+              return utils.emailCheck(mail)
+            },
+            message: "L'email n'est pas valide."
+        }, 
         unique: true,
         select: false,
     },
     username: { 
         type: String, 
-        required: true, 
+        required: [true, "Le pseudo est obligatoire"], 
         unique: true,
         maxlength : [20, "Votre nom doit comporter au maximum 20 caractères"], 
         minlength : [2, "Votre nom doit comporter au moins 2 caractères"]
     },
     password: { 
         type: String, 
-        required: true,
+        required: [true, "Le mot de passe est obligatoire"],
         minlength : [4, "Votre mot de passe doit comporter au moins 4 caractères"],
         select: false,
     },
@@ -48,6 +57,8 @@ const userSchema = new Schema<IUser, UserModel, IUserMethods>({
     refreshPasswordLastUse: Number,
     resetPassword: String,
     resetPasswordExpiry: Number,
+}, {
+    collection : "users"
 });
 
 userSchema.pre("save", async function(next) {
@@ -62,12 +73,12 @@ userSchema.methods.comparePassword = async function(enteredPassword : string) {
 }
 
 userSchema.methods.generateToken = async function() {
-    const secondData = Date.now() + APPCRITIC.TOKENEXPIRE - 1580511600000
+    const secondData = Date.now() + env.TOKEN_EXPIRATION
     
     const tokenFirstPart = Buffer.from(`${this._id}`).toString('base64url')
     const tokenSecondPart = Buffer.from(`${secondData}`).toString('base64url')
     
-    const signature = `${tokenFirstPart}.${tokenSecondPart}.${APPCRITIC.TOKENSIGNATURE}`
+    const signature = `${tokenFirstPart}.${tokenSecondPart}.${env.PASSWORD_SERVICE}`
     let tokenEndPart = await bcrypt.hash(signature, 10)
     tokenEndPart = Buffer.from(`${tokenEndPart}`).toString('base64url')
 
@@ -83,33 +94,4 @@ userSchema.methods.getResetPassword = async function() {
     return resetToken;
 }
 
-userSchema.statics.decodeToken = async (token : string) : Promise<tokenData> => {
-    const tokenParts = token.split(".")
-    
-    const tokenFirstPart = tokenParts[0]; // {email, id}
-    const tokenSecondPart = tokenParts[1]; // valid date
-    let tokenEndPart = tokenParts[2];
-    tokenEndPart = Buffer.from(`${tokenEndPart}`, 'base64url').toString('utf-8')
-
-    const expireDate = parseInt(Buffer.from(`${tokenSecondPart}`, 'base64url').toString('utf-8'))
-
-
-    const isValid = bcrypt.compareSync(`${tokenFirstPart}.${tokenSecondPart}.${APPCRITIC.TOKENSIGNATURE}`, tokenEndPart) && expireDate > Date.now() - 1580511600000
-
-
-    if(!isValid) return {
-        isValid: false,
-        id : "0",
-    }
-
-    const userID = Buffer.from(`${tokenFirstPart}`, 'base64url').toString('utf-8')
-
-    const data = {
-        id : userID,
-        isValid : true 
-    }
-
-    return data
-}
-
-export default model<IUser, UserModel>("User", userSchema);
+export default model("User", userSchema);

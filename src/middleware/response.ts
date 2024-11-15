@@ -1,24 +1,18 @@
-import { NextFunction, Request, Response } from "express"
-import { loggeurReqErr, typeLog } from "../utils/logs"
-import { ResponseException } from "../utils/responseException"
-import { RespExcept } from "../config/types"
+import { logSys } from "../config/log"
+import { ResponseException } from "packages"
+import { NextFunction, Request, Response } from "express";
 
-export const ResponseProtocole = (err : Error & RespExcept, req : Request, res : Response, next : NextFunction) => {
+let i = 0
+export const ResponseProtocole = (err : Error & any, req : Request, res : Response, next : NextFunction) => {
     const logErr = err
     if(!('status' in err)){
-        err = new ResponseException()
+        err = new ResponseException().UnknownError()
     }
     
-    if(err.status == 403){
-        const errorLog = new Error(err.reason)
-        errorLog.name = `${err.status} ${err.title}`
-        loggeurReqErr(req, errorLog, typeLog.note)
-    }
-
     if(err.status >= 500){
-        loggeurReqErr(req, logErr, typeLog.danger)
+        logSys.UnknowRequestError(req.method, req.protocol, req.originalUrl, JSON.stringify(req.params), JSON.stringify(req.body), JSON.stringify(req.cookies), JSON.stringify(req.headers), logErr)
     }
 
-    return res.status(err.status).json(err.send())
+    return res.status(err.status).json(err)
     next()
 }

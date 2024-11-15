@@ -1,62 +1,82 @@
-import { isAuth } from '../../middleware/auth';
-import { imageFilter } from '../../middleware/imageFileFilter';
 import { 
+    searchAvatarUserById, 
     getUserDetailsById, 
     getAccountDetails, 
-    forgotPassword, 
-    getUserDetails, 
+    // forgotPassword, 
     updatePassword, 
     deleteProfile,
-    resetPassword, 
+    // resetPassword, 
     updateProfile,
-    getAllUsers, 
-    searchUsers, 
-    followUser, 
+    // getAllUsers, 
+    // followUser, 
     signupUser, 
-    loginUser, 
+    pingedByAd,
+    loginUser,
 } from './userController'
-// import { isAuthenticatedUser } from "../middlewares/auth.js";
-// import { limiterUser } from "../middlewares/rate-limit.js";
+import { controleOrigine, isAuth } from '../../middleware/auth';
+import { imageFilter } from '../../middleware/imageFileFilter';
+import { LogRequest } from '../../config/log';
 import express from "express";
 
-const router = express.Router()
+const router = express.Router();
+router.use(controleOrigine);
+router.use(LogRequest)
 
-router.route('/sign/up')
+const connect = express.Router();
+router.use("/sign/", connect);
+
+connect.route('/up')
 .post(signupUser);
-
-router.route('/sign/in')
+connect.route('/in')
 .post(loginUser); 
 
 
-router.route('/password')
-.post(isAuth, updatePassword);
-router.route('/password/forgot')
-.post(forgotPassword);
-router.route('/password/reset/:token')
-.put(resetPassword);
+const password = express.Router();
+router.use("/password", password)
+
+password.route('/')
+.put(isAuth, updatePassword);
+// -- Bloqué temporairement le temps de créer le service mail -- //
+// password.route('/forgot')
+// .post(forgotPassword);
+// password.route('/reset/:token')
+// .put(resetPassword);
+// -- Bloqué temporairement le temps de créer le service mail -- //
 
 
-router.route('/@me')
-.get(isAuth, getAccountDetails)
+const me = express.Router()
+router.use("/@me", me)
+
+me.route('/')
+.post(isAuth, getAccountDetails)
 .put(isAuth, updateProfile)
 .delete(isAuth, deleteProfile);
-router.route('/@me/avatar')
-.post(isAuth, imageFilter);
-router.route('/@me/follow')
-.post(isAuth, followUser);
+me.route('/avatar')
+.put(isAuth, imageFilter);
+// -- Supprimé temporairement car pour l'instant l'application n'a pas de "plateforme" pour la commu
+// me.route('/follow')
+// .post(isAuth, followUser);
+// -- Supprimé temporairement car pour l'instant l'application n'a pas de "plateforme" pour la commu
 
 
-router.route("/search/user/name")
-.get(isAuth, getUserDetails);
-router.route("/search/user/id")
-.get(isAuth, getUserDetailsById);
-router.route("/search/users")
-.get(isAuth, searchUsers);
+const search = express.Router()
+router.use("/search", search)
 
-router.route("/suggested/users")
-.get(isAuth, getAllUsers);
+search.route("/user/id")
+.get(getUserDetailsById);
+search.route("/user/avatar/id")
+.get(searchAvatarUserById);
 
+// -- Supprimé temporairement car pour l'instant l'application n'a pas de "plateforme" pour la commu
+// router.route("/suggested/users")
+// .get(isAuth, getAllUsers);
+// -- Supprimé temporairement car pour l'instant l'application n'a pas de "plateforme" pour la commu
 
+// -- Disponible à la prochaine version -- //
+// router.route("/ban")
+// -- Disponible à la prochaine version -- //
 
+router.route('/ping')
+.get(pingedByAd)
 
 export default router

@@ -1,49 +1,42 @@
-import { ResponseException } from "../utils/responseException";
-import { errorCode, SuccessCode, Request } from "../config/types";
 import { NextFunction, Response } from "express";
 import User from '../services/user/userModel';
+import { ResponseException } from "packages";
 import { catchSync } from "./catchAsync";
-import { v4 as uuid } from "uuid";
-import crypto from "crypto"
 import path from "path";
 
-/* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-export const imageFilter = catchSync(async (req : Request, res : Response, next : NextFunction) => {
-    if (!req.files) throw new ResponseException(errorCode.BadRequest, "Aucun fichier fournit.");
+export const imageFilter = catchSync(async (req : any, res : Response, next : NextFunction) => {
+    if (!req.files) throw new ResponseException("Aucun fichier fournit.").BadRequest();
 
     const { avatar } = req.files;
-    /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
     const image: any = avatar; 
-    if(!image) throw new ResponseException(errorCode.BadRequest, "Aucun avatar fournit")
+    if(!image) throw new ResponseException("Aucun avatar fournit").BadRequest()
 
     const extensionName = path.extname(image.name)
     const allowedExtension = ['.png','.jpg','.jpeg', '.gif'];
 
-    if(!allowedExtension.includes(extensionName) || !image.mimetype.startsWith('image')) throw new ResponseException(errorCode.BadRequest, "Invalid image type");
-
-    const hash = crypto.createHash('sha256')
+    if(!allowedExtension.includes(extensionName) || !image.mimetype.startsWith('image')) throw new ResponseException("Invalid image type").BadRequest();
 
     const datebase = (Date.now() - 1580511600000) / 1000
-    const nameValid = `${parseInt(`${datebase}`)}.${uuid().slice(0, 4)}`
+    const nameValid = `${parseInt(`${datebase}`)}.${Math.floor(Math.random() * 999999999)}`
 
-    hash.update(nameValid)
-
-    const basename = hash.digest('base64url')
-
-    image.name = `${basename}${path.parse(image.name).ext}`;
-    image.mv(`${path.resolve("public/picture/user", image.name)}`, async (err: Error) => {
+    image.name = `${nameValid}${path.parse(image.name).ext}`;
+    image.mv(`${path.resolve("picture/user", image.name)}`, async (err: Error) => {
         if (err) return next(err)
   
         const newUserData = {
             avatar : `/avatars/${image.name}`
         }
 
-        await User.findByIdAndUpdate(req.user._id, newUserData, {
-            new: true,
-            runValidators: true,
-            useFindAndModify: true,
-        });
+        try{
+            await User.findByIdAndUpdate(req.user._id, newUserData, {
+                new: true,
+                runValidators: true,
+                useFindAndModify: true,
+            });
+        }catch(e){
+            next(e)
+        }
 
-        return next(new ResponseException(SuccessCode.OK, "Photo de profil bien mis à jour."))
+        return next(new ResponseException("Photo de profil bien mis à jour.").OK())
     });
 })

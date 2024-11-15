@@ -1,15 +1,12 @@
+import path from "path";
 import express from "express";
-import cookieParse from "cookie-parser";
-import { errorCode } from "./config/types";
 import fileUpload from "express-fileupload";
-import { APPCRITIC } from "./config/envLoader";
+import { ResponseException } from "packages";
+import { connectDatabase } from "./config/db";
+import { CE_Services, logSys } from "./config/log";
+import { catchSync } from "./middleware/catchAsync";
 import userRouter from "./services/user/user.routes";
 import { ResponseProtocole } from "./middleware/response";
-import { ResponseException } from "./utils/responseException";
-
-import { connectDatabase } from "./config/db"
-import path from "path";
-import { catchSync } from "./middleware/catchAsync";
 
 const app = express()
 
@@ -24,12 +21,11 @@ MIDDLEWARE
 */
 
 app.use(express.json())
-app.use(cookieParse(APPCRITIC.SECRETCOOKIES))
 app.use(fileUpload({
     createParentPath: true,
     abortOnLimit : true,
     limitHandler : (req, res, next) => {
-        next(new ResponseException(errorCode.BadRequest, "Fichier trop volumineux."))
+        next(new ResponseException("Fichier trop volumineux.").BadRequest())
     },
     parseNested : true,
     limits : { 
@@ -43,18 +39,15 @@ API USER SERVICE
 
 app.use("/", userRouter)
 
-const UserAvatar = express.static(path.resolve('public', 'picture', 'user'))
-const DefaultAvatar = express.static(path.resolve('public', 'picture', 'default'))
-
-app.use('/avatars', UserAvatar)
-app.use('/avatars', DefaultAvatar)
+app.use("/avatars", express.static(path.resolve('./picture/default')))
+app.use("/avatars", express.static(path.resolve('./picture/user')))
 
 /*
 ERROR 404
 */
 
 app.use('*', catchSync(async() => {
-    throw new ResponseException(errorCode.NotFound, "Chemin ou méthodes non supporté.")
+    throw new ResponseException("Chemin ou méthodes non supporté.").NotFound()
 }))
 
 /*
@@ -62,5 +55,13 @@ ERROR HANDLER
 */
 
 app.use(ResponseProtocole);
+
+/*
+    CRITIC LOGS
+*/
+process.on("uncaughtException", (e) => {
+    console.log(e)
+    logSys.UnknowAppError(CE_Services.index, e)
+});
 
 export default app;

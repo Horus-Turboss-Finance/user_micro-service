@@ -1,25 +1,44 @@
-import app from './app'
+import app from './app';
+import path from 'path';
+import { params, utils } from "packages"
 import os, { NetworkInterfaceInfo } from "os";
-import { APPCRITIC } from "./config/envLoader";
-import { loggeurInfo, serviceType, typeLog } from "./utils/logs";
+import { logSys, CE_Services } from './config/log';
+import { SignalAdressManager } from './utils/adressManager';
+
+const { FreePort } = utils;
+let { env, loadEnv, serviceName } = params;
+
+env = loadEnv(path.resolve(__dirname, "../../.env"));
 
 /*
 CONNECT API
 */
+const main = async () => {
+  try{
+    const port = await FreePort()
 
-app.listen(APPCRITIC.PORT, () => {
-    loggeurInfo(serviceType.app, "Connect Url :", typeLog.info)
-    const interfaces : NodeJS.Dict<NetworkInterfaceInfo[]> = os.networkInterfaces();
-    for (const k in interfaces) {
-        for (const k2 in interfaces[k]) {
-            /* eslint-disable-next-line @typescript-eslint/ban-ts-comment */
-            /* @ts-ignore */
-            const address = interfaces[k][k2];
+    app.listen(port, env.IP_USER_SERVICE, () => {
+      const interfaces : NodeJS.Dict<NetworkInterfaceInfo[]> = os.networkInterfaces();
+      for (const k in interfaces) {
+          for (const k2 in interfaces[k]) {
+              /* @ts-ignore */
+              const address = interfaces[k][k2];
+  
+              if (address.family === 'IPv4') {
+                logSys.ServiceInfo(CE_Services.app, `${address.address}:${port}`);
 
-            if (address.family === 'IPv4' && !address.internal) {
-                loggeurInfo(serviceType.app, `${address.address}:${APPCRITIC.PORT}`, typeLog.info)
-            }
-        }
-    }
-})
+                /*
+                  CALL ADRESS MANAGER 
+                */
+                
+                SignalAdressManager({adressIP : address.address, port, service : serviceName.object.utilisateur})
+              }
+          }
+      }
+    })
+  }catch(e : any){
+    logSys.UnknowAppError(CE_Services.index, e)
+  }
+}
 
+main()

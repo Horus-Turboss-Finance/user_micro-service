@@ -1,13 +1,17 @@
-import { loggeurInfo, loggeurServiceErr, serviceType, typeLog } from "../utils/logs";
-import { DBCONFIG } from "./envLoader";
+import { logSys, CE_Services } from "./log";
+import { params } from "packages";
 
 import mongoose from "mongoose";
+import path from "path";
+
+let { env, loadEnv } = params
+env = loadEnv(path.resolve(__dirname, '../../../.env'))
 
 export const connectDatabase = () => {
-  mongoose.connect(DBCONFIG.URLDB)
+  mongoose.connect(env.URLDB)
   .then(() => {
-    loggeurInfo(serviceType.mongoose, "Connected", typeLog.note)
+    logSys.ServiceInfo(CE_Services.mongoose, "Connected")
   }).catch((error) => {
-    loggeurServiceErr(serviceType.mongoose, error, typeLog.caution)
+    logSys.UnknowAppError(CE_Services.mongoose, error)
   });
 }
