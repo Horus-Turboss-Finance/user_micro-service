@@ -1,13 +1,14 @@
+import { ResponseException, middleware } from "packages";
 import { NextFunction, Response } from "express";
 import User from '../services/user/userModel';
-import { ResponseException } from "packages";
-import { catchSync } from "./catchAsync";
 import path from "path";
+
+const { catchSync } = middleware;
 
 export const imageFilter = catchSync(async (req : any, res : Response, next : NextFunction) => {
     if (!req.files) throw new ResponseException("Aucun fichier fournit.").BadRequest();
 
-    const { avatar } = req.files;
+    const { avatar } = req.files ?? 0;
     const image: any = avatar; 
     if(!image) throw new ResponseException("Aucun avatar fournit").BadRequest()
 
@@ -20,6 +21,9 @@ export const imageFilter = catchSync(async (req : any, res : Response, next : Ne
     const nameValid = `${parseInt(`${datebase}`)}.${Math.floor(Math.random() * 999999999)}`
 
     image.name = `${nameValid}${path.parse(image.name).ext}`;
+
+    if(!req.isValidToken) throw new ResponseException("Connection requise").Unauthorized();
+
     image.mv(`${path.resolve("picture/user", image.name)}`, async (err: Error) => {
         if (err) return next(err)
   
@@ -28,15 +32,14 @@ export const imageFilter = catchSync(async (req : any, res : Response, next : Ne
         }
 
         try{
-            await User.findByIdAndUpdate(req.user._id, newUserData, {
-                new: true,
+            await User.findByIdAndUpdate(req.userID, newUserData, {
                 runValidators: true,
                 useFindAndModify: true,
             });
+            
+            next(new ResponseException("Photo de profil bien mis à jour.").OK())
         }catch(e){
             next(e)
         }
-
-        return next(new ResponseException("Photo de profil bien mis à jour.").OK())
     });
 })

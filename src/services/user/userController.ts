@@ -3,14 +3,12 @@ import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import User from './userModel';
 import { existsSync } from "fs";
-import { catchSync } from '../../middleware/catchAsync';
 import { NextFunction, Request, Response } from 'express';
-import { ResponseException, utils, params } from "packages";
+import { ResponseException, utils, middleware } from "packages";
 
-let { stringContraint, mongooseMessageErrorFormator } = utils
-let { env, loadEnv } = params
+let { stringContraint, mongooseMessageErrorFormator, encodeUserToken } = utils
 
-env = loadEnv(path.resolve(__dirname, "../../../../.env"))
+let { catchSync } = middleware
 
 // Signup User
 export const signupUser = catchSync(async(req : Request, res : Response, next : NextFunction) => {
@@ -29,7 +27,7 @@ export const signupUser = catchSync(async(req : Request, res : Response, next : 
 
         await validateCheck.save()
 
-        const token = await validateCheck.generateToken();
+        const token = await encodeUserToken(validateCheck._id);
         
         let response = JSON.stringify(toJsonUserProperty(validateCheck, token))
         throw new ResponseException(response).Success()
@@ -76,7 +74,7 @@ export const loginUser = catchSync(async(req : Request, res : Response, next : N
         throw new ResponseException("identifiant ou mot de passe incorrect").Unauthorized()
     }
 
-    const token = await user.generateToken();
+    const token = await encodeUserToken(user._id);
 
     let response = JSON.stringify(toJsonUserProperty(user, token))
     throw new ResponseException(response).Success()
@@ -88,7 +86,9 @@ export const loginUser = catchSync(async(req : Request, res : Response, next : N
 
 // Get User Details --Logged In User
 export const getAccountDetails = catchSync(async(req : any) => { 
-    let user = req.user
+    let user = await User.findById(req.userID);
+
+    if(!req.isValidToken) throw new ResponseException("Vous n'êtes pas autorisé à avoir cette information").Forbidden()
 
     let response = JSON.stringify(toJsonUserProperty(user))
     throw new ResponseException(response).Success()
@@ -107,7 +107,7 @@ export const getUserDetailsById = catchSync(async(req : Request) => {
     throw new ResponseException(response).Success()
 });
 
-// Get All Users -- TEMPORALY DISABEL --
+// Get All Users -- TEMPORALY DISABEL -- A remettre en conformité lors de sa réactivation
 export const getAllUsers = catchSync(async(req : any) => {
     const users = await User.find();
 
@@ -125,18 +125,20 @@ export const getAllUsers = catchSync(async(req : any) => {
 export const updatePassword = catchSync(async(req : any) => {
     const { oldPassword, newPassword } = req.body;
 
-    const user : any = req.user;
+    const user : any = User.findById(req.userID);
     if(!user) throw new ResponseException("Identifiant invalides").Unauthorized()
 
     const isPasswordMatched = await user.comparePassword(oldPassword);
 
-    if (!isPasswordMatched) throw new ResponseException("Identifiant invalides").Unauthorized()
-    if(!stringContraint(newPassword, 4)) throw new ResponseException("Le mot de passe doit contenir au minimum 4 caractères.").BadRequest()
+    if (!isPasswordMatched) throw new ResponseException("Identifiant invalides").Unauthorized();
+    if(!stringContraint(newPassword, 4)) throw new ResponseException("Le mot de passe doit contenir au minimum 4 caractères.").BadRequest();
+
+    if(!req.isValidToken) throw new ResponseException("Vous n'êtes pas autorisé à modifier cette information").Forbidden();
 
     user.password = newPassword;
     await user.save();
     
-    const token = await user.generateToken();
+    const token = await encodeUserToken(user._id);
 
     let response = JSON.stringify(toJsonUserProperty(user, token))
     throw new ResponseException(response).Success()
@@ -157,14 +159,15 @@ export const updateProfile = catchSync(async(req : any) => {
     }
 
     try{
-        let validateCheck : any = await User.findByIdAndUpdate(req.user._id, newUserData, {
-            new: true,
+        if(!req.isValidToken) throw new ResponseException("Vous n'êtes pas autorisé à modifier cette information").Forbidden();
+
+        let validateCheck : any = await User.findByIdAndUpdate(req.userID, newUserData, {
             runValidators: true,
             useFindAndModify: true,
         });
         
         if(!validateCheck) throw new ResponseException("Aucun utilisateur trouvé").NotFound()
-        const token = await validateCheck.generateToken();
+        const token = await encodeUserToken(validateCheck._id);
 
         let response = JSON.stringify(toJsonUserProperty(validateCheck, token))
         throw new ResponseException(response).Success()
@@ -187,7 +190,8 @@ export const updateProfile = catchSync(async(req : any) => {
 
 // Delete Profile  
 export const deleteProfile = catchSync(async(req : any, res : Response) => {
-    let user = req.user
+    let user = await User.findById(req.userID); 
+    if(!req.isValidToken || !user) throw new ResponseException("Connection requis").Unauthorized();
 
     const followers = user.followers;
     const following = user.following;
@@ -230,7 +234,7 @@ export const deleteProfile = catchSync(async(req : any, res : Response) => {
     throw new ResponseException('Utilisateur supprimé').Success()
 });
 
-// Follow | Unfollow User -- TEMPORALY DISABLE --
+// Follow | Unfollow User -- TEMPORALY DISABLE -- A remettre en conformité lors de sa réactivation
 export const followUser = catchSync(async(req : any) => {
     if(req.body.id == req.user._id) throw new ResponseException("Cannot follow yourself")
     if (req.body.id && !req.body.id.match(/^[0-9a-fA-F]{24}$/)) throw new ResponseException("Identifiant fournit invalide")
@@ -263,7 +267,7 @@ export const followUser = catchSync(async(req : any) => {
     }
 });
 
-// Forgot Password -- TEMPORALY DISABLE --
+// Forgot Password -- TEMPORALY DISABLE -- A remettre en conformité lors de sa réactivation
 export const forgotPassword = catchSync(async(req : Request, res : Response, next :NextFunction) => {
     let { email } = req.body
 
@@ -300,7 +304,7 @@ export const forgotPassword = catchSync(async(req : Request, res : Response, nex
     }
 });
 
-// Reset Password -- TEMPORALY DISABLE --
+// Reset Password -- TEMPORALY DISABLE -- A remettre en conformité lors de sa réactivation
 export const resetPassword = catchSync(async(req : Request, res : Response, next : NextFunction) => {
     const resetPassword = crypto.createHash("sha256").update(req.params.token).digest("hex");
 
@@ -318,9 +322,10 @@ export const resetPassword = catchSync(async(req : Request, res : Response, next
     user.resetPassword = undefined;
     user.resetPasswordExpiry = undefined;
 
-    await user.save();
-
-    const token = await user.generateToken();
+    let err = await user.save();
+    if(err) throw err;
+    
+    const token = await encodeUserToken(user._id);
 
     let response = JSON.stringify(toJsonUserProperty(user, token))
     throw new ResponseException(response).Success()

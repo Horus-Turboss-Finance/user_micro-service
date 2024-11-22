@@ -1,12 +1,7 @@
-import path from "path";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
+import { utils } from "packages";
 import { Schema, model } from 'mongoose';
-import { params, utils } from "packages"
-
-let { env, loadEnv } = params
-
-env = loadEnv(path.resolve(__dirname, "../../../../.env"))
 
 const userSchema = new Schema({
     avatar:  {
@@ -70,19 +65,6 @@ userSchema.pre("save", async function(next) {
 
 userSchema.methods.comparePassword = async function(enteredPassword : string) {
     return await bcrypt.compare(enteredPassword, this.password);
-}
-
-userSchema.methods.generateToken = async function() {
-    const secondData = Date.now() + env.TOKEN_EXPIRATION
-    
-    const tokenFirstPart = Buffer.from(`${this._id}`).toString('base64url')
-    const tokenSecondPart = Buffer.from(`${secondData}`).toString('base64url')
-    
-    const signature = `${tokenFirstPart}.${tokenSecondPart}.${env.PASSWORD_SERVICE}`
-    let tokenEndPart = await bcrypt.hash(signature, 10)
-    tokenEndPart = Buffer.from(`${tokenEndPart}`).toString('base64url')
-
-    return `${tokenFirstPart}.${tokenSecondPart}.${tokenEndPart}`
 }
 
 userSchema.methods.getResetPassword = async function() {

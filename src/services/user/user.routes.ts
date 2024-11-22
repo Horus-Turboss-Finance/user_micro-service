@@ -13,10 +13,11 @@ import {
     pingedByAd,
     loginUser,
 } from './userController'
-import { controleOrigine, isAuth } from '../../middleware/auth';
 import { imageFilter } from '../../middleware/imageFileFilter';
-import { LogRequest } from '../../config/log';
+import { middleware } from "packages";
 import express from "express";
+
+let { LogRequest, controleOrigine, isAuth} = middleware
 
 const router = express.Router();
 router.use(controleOrigine);
@@ -62,9 +63,9 @@ me.route('/avatar')
 const search = express.Router()
 router.use("/search", search)
 
-search.route("/user/id")
+search.route("/user/profile/:id")
 .get(getUserDetailsById);
-search.route("/user/avatar/id")
+search.route("/user/avatar/:id")
 .get(searchAvatarUserById);
 
 // -- Supprimé temporairement car pour l'instant l'application n'a pas de "plateforme" pour la commu

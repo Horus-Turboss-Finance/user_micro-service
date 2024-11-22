@@ -1,20 +1,32 @@
 import path from "path";
 import express from "express";
 import fileUpload from "express-fileupload";
-import { ResponseException } from "packages";
 import { connectDatabase } from "./config/db";
-import { CE_Services, logSys } from "./config/log";
-import { catchSync } from "./middleware/catchAsync";
 import userRouter from "./services/user/user.routes";
-import { ResponseProtocole } from "./middleware/response";
+import { ResponseException, log, middleware, params } from "packages";
 
 const app = express()
+
+let { catchSync, ResponseProtocole } = middleware
+let { serviceName, inAppServiceName, loadEnv, env } = params
+
+/*
+    CONFIGURATION
+*/
+
+env = loadEnv(path.resolve(__dirname, "../../.env"));
+
+app.set("envLoad", env)
+app.set("logSys", new log(serviceName.object.utilisateur, path.resolve("src", "log")))
+
+app.disable("x-powered-by")
+app.enable("json escalpe")
 
 /*
 CONNECT DB
 */
 
-connectDatabase()
+connectDatabase(app)
 
 /*
 MIDDLEWARE
@@ -61,7 +73,11 @@ app.use(ResponseProtocole);
 */
 process.on("uncaughtException", (e) => {
     console.log(e)
-    logSys.UnknowAppError(CE_Services.index, e)
+    let logSys = app.get("logSys")
+
+    if(!logSys) throw new Error("LogSys error : LogSys n'est pas monté");
+
+    logSys.UnknowAppError(inAppServiceName.index, e)
 });
 
 export default app;
