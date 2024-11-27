@@ -17,7 +17,7 @@ import { imageFilter } from '../../middleware/imageFileFilter';
 import { middleware } from "packages";
 import express from "express";
 
-let { LogRequest, controleOrigine, isAuth} = middleware
+let { LogRequest, controleOrigine, isAuth } = middleware;
 
 const router = express.Router();
 router.use(controleOrigine);

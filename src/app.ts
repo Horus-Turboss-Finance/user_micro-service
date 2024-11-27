@@ -13,7 +13,6 @@ let { serviceName, inAppServiceName, loadEnv, env } = params
 /*
     CONFIGURATION
 */
-
 env = loadEnv(path.resolve(__dirname, "../../.env"));
 
 app.set("envLoad", env)
@@ -23,16 +22,17 @@ app.disable("x-powered-by")
 app.enable("json escalpe")
 
 /*
-CONNECT DB
+    CONNECT DB
 */
-
 connectDatabase(app)
 
 /*
-MIDDLEWARE
+    MIDDLEWARE
 */
-
 app.use(express.json())
+app.use(express.urlencoded({
+    extended: true,
+}))
 app.use(fileUpload({
     createParentPath: true,
     abortOnLimit : true,
@@ -46,24 +46,22 @@ app.use(fileUpload({
 }))
 
 /*
-API USER SERVICE
+    API USER SERVICE
 */
-
 app.use("/", userRouter)
 
 app.use("/avatars", express.static(path.resolve('./picture/default')))
 app.use("/avatars", express.static(path.resolve('./picture/user')))
 
 /*
-ERROR 404
+    ERROR 404
 */
-
 app.use('*', catchSync(async() => {
     throw new ResponseException("Chemin ou méthodes non supporté.").NotFound()
 }))
 
 /*
-ERROR HANDLER
+    ERROR HANDLER
 */
 
 app.use(ResponseProtocole);
