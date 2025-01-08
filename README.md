@@ -186,7 +186,6 @@ POST /sign/up
 ```js
 {
   success : true,
-  title : "SUCCESS",
   status : 200,
   data : '[{"id":"66b3af30ebbb97b1d38821f8","avatar":"/avatars/default.jpg","username":"camouille","bio":"Hi👋 Welcome To My Profile","followers":[],"following":[],"token":"Jadoreecrirenimportequoi.etquecapassecremedansladoc"}]'
 }
@@ -236,7 +235,6 @@ POST /sign/in
 ```js
 {
   success : true,
-  title : "SUCCESS",
   status : 200,
   data : '[{"id":"66b3af30ebbb97b1d38821f8","avatar":"/avatars/default.jpg","username":"camouille","bio":"Hi👋 Welcome To My Profile","followers":[],"following":[],"token":"Jadoreecrirenimportequoi.etquecapassecremedansladoc"}]'
 }
@@ -292,7 +290,6 @@ PUT /password
 ```js
 {
   success : true,
-  title : "SUCCESS",
   status : 200,
   data : '[{"id":"66b3af30ebbb97b1d38821f8","avatar":"/avatars/default.jpg","username":"camouille","bio":"Hi👋 Welcome To My Profile","followers":[],"following":[],"token":"Jadoreecrirenimportequoi.etquecapassecremedansladoc"}]'
 }
@@ -340,7 +337,6 @@ POST /@me
 ```js
 {
   success : true,
-  title : "SUCCESS",
   status : 200,
   data : '[{"_id":"66b3af30ebbb97b1d38821f8","avatar":"/avatars/default.jpg","username":"camouille","bio":"Hi👋 Welcome To My Profile","followers":[],"following":[]}]'
 }
@@ -395,7 +391,6 @@ PUT /@me
 ```js
 {
   success : true,
-  title : "SUCCESS",
   status : 200,
   data : '[{"_id":"66b3af30ebbb97b1d38821f8","avatar":"/avatars/default.jpg","username":"camouille","bio":"Hi👋 Welcome To My Profile","followers":[],"following":[]}]'
 }
@@ -444,7 +439,6 @@ DELETE /@me
 ```js
 {
   success : true,
-  title : "SUCCESS",
   status : 200,
   data : 'Utilisateur supprimé'
 }
@@ -498,7 +492,6 @@ PUT /@me/avatar
 ```js
 {
   success : true,
-  title : "SUCCESS",
   status : 200,
   data :  "Photo de profil bien mis à jour."
 }
@@ -534,7 +527,6 @@ GET /ping
 ```js
 {
   success : true,
-  title : "SUCCESS",
   status : 200,
   data :  "Service en ligne"
 }
