@@ -1,7 +1,6 @@
-TODO
 <div align="center">
-  <h1>Cash Eyes (user-service api documentation)</h1>
-  <h6>Ce repository contien toutes les routes (et routines) du micro service utilisateur de Cash Eyes.</h6>
+  <h1>Cash Sight (user-service api documentation)</h1>
+  <h6>Ce repository contien toutes les routes (et routines) du micro service utilisateur de Cash Sight.</h6>
 </div>
 
 ### Table des matières.
@@ -121,7 +120,7 @@ npm install
 **2. Créer les fichiers de configuration**
 
 ```shell
-cd ./config
+cd ../
 nano .env
 ```
 
@@ -137,10 +136,19 @@ PASSWORD_SERVICE="Le mot de passe qui sécurise tout les services et leurs commu
 TOKEN_EXPIRATION="Le temps d'expiration du token en miliseconde"
 
 IP_APIGATEWAY="l'ip de la machine de l'api gateway (127.0.0.1 si tout roule sur la même machine)"
+IP_USER_SERVICE="l'ip de la machine de l'user service (127.0.0.1 si tout roule sur la même machine)"
 IP_ADRESSMANAGER="l'ip de la machine de l'adress manager (127.0.0.1 si tout roule sur la même machine)"
+//SI VOUS SOUHAITEZ METTRE PLUSIEURS IP WHITELIST METTRE UN ";" exemple : 172.0.0.1;0.0.0.0;192.168.27.10
 IP_SERVICE_WHITELIST="l'ip des machines autorisé à se connecter directement entre services (127.0.0.1 si tout roule sur la même machine)"
 
 NODE_ENV="DEVELOPMENT|PRODUCTION|TEST"
+```
+
+**2. Créer les dossiers de log**
+```shell
+cd ./user_micro-service/src
+mkdir log
+cd ../
 ```
 
 ## Démarer le backend de l'application
@@ -154,6 +162,9 @@ npm start
 
 ## API
 
+> [!CAUTION]
+> Toutes les requêtes doivent être accompagné d'un paramètre "trust" dans le body ou le header de la requête.
+
 ### Créer son profil
 #### URL
 ```http
@@ -163,7 +174,6 @@ POST /sign/up
 #### Request Parameters : 
 | Parameter  | Type     | Taille Min | Taille Max |
 | :--------- | :------: | :-----: | :-----: |
-| `signature` | `String` | &#9744; | &#9744; |
 | `password` | `String` |   `4`   | &#9744; |
 | `username` | `String` |   `2`   |   `20`  |
 | `email`    | `String` | &#9744; | &#9744; | 
@@ -176,7 +186,7 @@ POST /sign/up
         url: '/sign/up',
         method: 'POST',
         body: {
-            signature : process.env.PASSWORD_SERVICE,
+            trust : process.env.PASSWORD_SERVICE,
             password : input.password, 
             username : input.username,
             email : input.email
@@ -194,13 +204,16 @@ POST /sign/up
 | `status` | `Interger` | Le code http de la réponse |
 | `data` | `User` | Result de la requête |
 
+> [!TIP]
+> A token will be delivered.
+
 #### *Exemple de réponse*
 ```js
 {
   success : true,
   title : "SUCCESS",
   status : 200,
-  data : '[{"_id":"66b3af30ebbb97b1d38821f8","avatar":"/avatars/default.jpg","username":"camouille","bio":"Hi👋 Welcome To My Profile","followers":[],"following":[],"token":"zeoifczaeopfahezofafoau.8zfzefiyzgfaf549"}]'
+  data : '[{"id":"66b3af30ebbb97b1d38821f8","avatar":"/avatars/default.jpg","username":"camouille","bio":"Hi👋 Welcome To My Profile","followers":[],"following":[],"token":"Jadoreecrirenimportequoi.etquecapassecremedansladoc"}]'
 }
 ```
 
@@ -213,9 +226,8 @@ POST /sign/in
 #### Request Parameters : 
 | Parameter  |   Type   |            Description            |
 | :--------- | :------: | :-------------------------------- |
-| `signature` | `String` | La signature entre services |
 | `password` | `String` | Le mot de passe pour s'identifier |
-|  `userId`  | `String` | Votre email ou votre nom          |
+| `identifiant`  | `String` | Votre email ou votre nom |
 
 #### *Exemple de requête*
 ```js
@@ -225,9 +237,9 @@ POST /sign/in
         url: '/sign/in',
         method: 'POST',
         body: {
-            signature : process.env.PASSWORD_SERVICE,
+            trust : process.env.PASSWORD_SERVICE,
             password : input.password, 
-            userId : input.username,
+            identifiant : input.username,
         },
     })
     .then(res => res.json())
@@ -243,7 +255,7 @@ POST /sign/in
 | `data` | `User` | Result de la requête |
 
 > [!TIP]
-> A token cookie will be delivered.
+> A token will be delivered.
 
 #### *Exemple de réponse*
 ```js
@@ -251,7 +263,7 @@ POST /sign/in
   success : true,
   title : "SUCCESS",
   status : 200,
-  data : '[{"_id":"66b3af30ebbb97b1d38821f8","avatar":"/avatars/default.jpg","username":"camouille","bio":"Hi👋 Welcome To My Profile","followers":[],"following":[]}]'
+  data : '[{"id":"66b3af30ebbb97b1d38821f8","avatar":"/avatars/default.jpg","username":"camouille","bio":"Hi👋 Welcome To My Profile","followers":[],"following":[],"token":"Jadoreecrirenimportequoi.etquecapassecremedansladoc"}]'
 }
 ```
 
@@ -259,13 +271,15 @@ POST /sign/in
 ### Mise à jour de son mdp
 #### URL
 ```http
-POST /password
+PUT /password
 ```
+
+> [!NOTE]
+> \[Token\] Required.
 
 #### Request Parameters : 
 | Parameter     |   Type   |            Description            |
 | :------------ | :------: | :-------------------------------- |
-| `signature` | `String` | La signature entre services |
 | `oldPassword` | `String` | Le mot de passe pour s'identifier |
 | `newPassword` | `String` | Le nouveau mdp pour s'identifier  |
 | `token`       | `String` | Votre identifiant                 |
@@ -278,7 +292,7 @@ POST /password
         url: '/password',
         method: 'POST',
         body: {
-            signature : process.env.PASSWORD_SERVICE,
+            trust : process.env.PASSWORD_SERVICE,
             oldPassword : input.confirmPassword,
             newPassword : input.Newpassword,
             token : sessionStorage.token,
@@ -296,20 +310,23 @@ POST /password
 | `status` | `Interger` | Le code http de la réponse |
 | `data` | `User` | Result de la requête |
 
+> [!TIP]
+> A token will be delivered.
+
 #### *Exemple de réponse*
 ```js
 {
   success : true,
   title : "SUCCESS",
   status : 200,
-  data : '[{"_id":"66b3af30ebbb97b1d38821f8","avatar":"/avatars/default.jpg","username":"camouille","bio":"Hi👋 Welcome To My Profile","followers":[],"following":[]}]'
+  data : '[{"id":"66b3af30ebbb97b1d38821f8","avatar":"/avatars/default.jpg","username":"camouille","bio":"Hi👋 Welcome To My Profile","followers":[],"following":[],"token":"Jadoreecrirenimportequoi.etquecapassecremedansladoc"}]'
 }
 ```
 
 ### Get account details
 #### URL
 ```http
-GET /@me
+POST /@me
 ```
 
 > [!NOTE]
@@ -318,7 +335,6 @@ GET /@me
 #### Request Parameters : 
 | Parameter  |   Type   | Description       |
 | :--------- | :------: | :---------------- |
-| `signature` | `String` | La signature entre services |
 | `token`    | `String` | Votre identifiant |
 
 #### *Exemple de requête*
@@ -329,7 +345,7 @@ GET /@me
         url: `/@me`,
         method: 'GET',
         body: {
-            signature : process.env.PASSWORD_SERVICE,
+            trust : process.env.PASSWORD_SERVICE,
             token : SessionStorage.token,
         },
     })
@@ -368,8 +384,7 @@ PUT /@me
 #### Request Parameters : 
 | Parameter  | Type     |   Min   |   Max   |
 | :--------- | :------: | :-----: | :-----: |
-| `signature` | `String` | &#9744; | &#9744; |
-| `bio`      | `String` |   `1`   |   `250` |
+| `bio`      | `String` | &#9744; |   `500` |
 | `username` | `String` |   `2`   |   `20`  |
 | `email`    | `String` | &#9744; | &#9744; | 
 | `token`    | `String` | &#9744; | &#9744; | 
@@ -382,7 +397,7 @@ PUT /@me
         url: `/@me`,
         method: 'PUT',
         body: {
-            signature : process.env.PASSWORD_SERVICE,
+            trust : process.env.PASSWORD_SERVICE,
             token : SessionStorage.token,
             username : input.username,
             email : input.email,
@@ -424,7 +439,6 @@ DELETE /@me
 #### Request Parameters : 
 | Parameter  | Type     |
 | :--------- | :------: | 
-| `signature` | `String` |
 | `token`    | `String` |
 
 #### *Exemple de requête*
@@ -435,7 +449,7 @@ DELETE /@me
         url: `/@me`,
         method: 'DELETE',
         body: {
-            signature : process.env.PASSWORD_SERVICE,
+            trust : process.env.PASSWORD_SERVICE,
             token : SessionStorage.token,
         },
     })
@@ -465,7 +479,7 @@ DELETE /@me
 ### Update profil picture
 #### URL
 ```http
-POST /@me/avatar
+PUT /@me/avatar
 ```
 
 > [!NOTE]
@@ -474,9 +488,8 @@ POST /@me/avatar
 #### Request Parameters : 
 | Parameter | Type     | Max     | Description |
 | :-------- | :------: | :-----: | :---------- |
-| `signature` | `String` | &#9744; | Mot de passe inter service |
-| `token`   | `String` | &#9744; | Identifiant |
-| `avatar`  | `File`   | `9Mb`   | Fichier img |
+| `token`   | `String` | &#9744; | Identifiant utilisateur |
+| `avatar`  | `File`   | `9Mb`   | Fichier img (png, jpg, jpeg, gif) only |
 
 #### *Exemple de requête*
 ```js
@@ -489,7 +502,7 @@ POST /@me/avatar
         url: `/@me/avatar`,
         method: 'POST',
         body: {
-            signature : process.env.PASSWORD_SERVICE,
+            trust : process.env.PASSWORD_SERVICE,
             token : SessionStorage.token,
         },
         formData
@@ -516,87 +529,19 @@ POST /@me/avatar
 }
 ```
 
-
-### Follow Unfollow
+### PING SERVICE
 #### URL
 ```http
-POST /@me/follow
+GET /ping
 ```
-
-> [!NOTE]
-> \[Token\]  Required.
-
-#### Request Parameters : 
-| Parameter  |   Type   |               Description               |
-| :--------- | :------: | :-------------------------------------- |
-| `signature` | `String` | Mot de passe inter service |
-| `id`       | `String` | l'id du compte que vous souhaitz suivre |
-| `token`    | `String` | Votre identifiant donnée lors de la co  |
 
 #### *Exemple de requête*
 ```js
     let axios = require('axios')
     // ...Code existant...//
     axios.request({
-        url: '/@me/follow',
-        method: 'POST',
-        body: {
-            signature : process.env.PASSWORD_SERVICE,
-            token : sessionStorage.token, 
-            id : input.userId,
-        },
-    })
-    .then(res => res.json())
-    .then(json => ...)
-```
-
-#### Response Parameters :
-| Parameter | Type | Description |
-| :-------- | :--: | :---------- |
-| `success` | `Boolean` | Validation si la requête s'est terminé sans problème où inversement |
-| `title` | `String` | Nom de l'erreur |
-| `status` | `Interger` | Le code http de la réponse |
-| `data` | `User` | Result de la requête |
-
-#### *Exemple de réponse*
-```js
-{
-  success : true,
-  title : "SUCCESS",
-  status : 200,
-  data : "Utilisateur abonné"|"Utilisateur désabonné"
-}
-```
-
-
-### Search user by name
-#### URL
-```http
-GET /search/user/name
-```
-
-> [!NOTE]
-> \[Token\] Required.
-
-#### Request Parameters : 
-| Parameter |   Type   | 
-| :-------- | :------: | 
-| `signature` | `String` |
-| `username`| `String` | 
-| `token`   | `String` | 
-
-#### *Exemple de requête*
-```js
-    let axios = require('axios')
-    // ...Code existant...//
-    axios.request({
-        url: '/search/user/name',
+        url: `/ping`,
         method: 'GET',
-        body: {
-            signature : process.env.PASSWORD_SERVICE,
-            token : sessionStorage.token, 
-            username : input.username,
-        },
     })
     .then(res => res.json())
     .then(json => ...)
@@ -616,163 +561,9 @@ GET /search/user/name
   success : true,
   title : "SUCCESS",
   status : 200,
-  data : '[{"_id":"66b3af30ebbb97b1d38821f8","avatar":"/avatars/default.jpg","username":"camouille","bio":"Hi👋 Welcome To My Profile","followers":[],"following":[]}]'
+  data :  "Service en ligne"
 }
 ```
-
-
-### Search user by id
-#### URL
-```http
-GET /search/user/id
-```
-
-> [!NOTE]
-> \[Token\]  Required.
-
-#### Request Parameters : 
-| Parameter |   Type   | 
-| :-------- | :------: | 
-| `signature` | `String` |
-| `id`      | `String` | 
-| `token`   | `String` | 
-
-#### *Exemple de requête*
-```js
-    let axios = require('axios')
-    // ...Code existant...//
-    axios.request({
-        url: '/search/user/name',
-        method: 'GET',
-        body: {
-            signature : process.env.PASSWORD_SERVICE,
-            token : sessionStorage.token, 
-            id : input.userId,
-        },
-    })
-    .then(res => res.json())
-    .then(json => ...)
-```
-
-#### Response Parameters :
-| Parameter | Type | Description |
-| :-------- | :--: | :---------- |
-| `success` | `Boolean` | Validation si la requête s'est terminé sans problème où inversement |
-| `title` | `String` | Nom de l'erreur |
-| `status` | `Interger` | Le code http de la réponse |
-| `data` | `User` | Result de la requête |
-
-#### *Exemple de réponse*
-```js
-{
-  success : true,
-  title : "SUCCESS",
-  status : 200,
-  data : '[{"_id":"66b3af30ebbb97b1d38821f8","avatar":"/avatars/default.jpg","username":"camouille","bio":"Hi👋 Welcome To My Profile","followers":[],"following":[]}]'
-}
-```
-
-
-### Search user by keyword
-#### URL
-```http
-GET /search/users
-```
-
-> [!NOTE]
-> \[Token\]  Required.
-
-#### Request Parameters : 
-| Parameter |   Type   |   Min   |
-| :-------- | :------: | :-----: |
-| `signature` | `String` | &#9744; |
-| `keyword` | `String` |   `4`   |
-| `token`   | `String` | &#9744; |
-
-#### *Exemple de requête*
-```js
-    let axios = require('axios')
-    // ...Code existant...//
-    axios.request({
-        url: '/search/users',
-        method: 'GET',
-        body: {
-            signature : process.env.PASSWORD_SERVICE,
-            token : sessionStorage.token, 
-            keyword : input.search,
-        },
-    })
-    .then(res => res.json())
-    .then(json => ...)
-```
-
-#### Response Parameters :
-| Parameter | Type | Description |
-| :-------- | :--: | :---------- |
-| `success` | `Boolean` | Validation si la requête s'est terminé sans problème où inversement |
-| `title` | `String` | Nom de l'erreur |
-| `status` | `Interger` | Le code http de la réponse |
-| `data` | `User` | Result de la requête |
-
-#### *Exemple de réponse*
-```js
-{
-  success : true,
-  title : "SUCCESS",
-  status : 200,
-  data : '[{"_id":"66b3af30ebbb97b1d38821f8","avatar":"/avatars/default.jpg","username":"camouille","bio":"Hi👋 Welcome To My Profile","followers":[],"following":[]}]'
-}
-```
-
-### Suggered user
-#### URL
-```http
-GET /suggested/users
-```
-
-> [!NOTE]
-> \[Token\]  Required.
-
-#### Request Parameters : 
-| Parameter |   Type   |   Min   |
-| :-------- | :------: | :-----: |
-| `signature` | `String` | &#9744;
-| `token`   | `String` | &#9744; |
-
-#### *Exemple de requête*
-```js
-    let axios = require('axios')
-    // ...Code existant...//
-    axios.request({
-        url: '/suggested/users',
-        method: 'GET',
-        body: {
-            signature : process.env.PASSWORD_SERVICE,
-            token : sessionStorage.token, 
-        },
-    })
-    .then(res => res.json())
-    .then(json => ...)
-```
-
-#### Response Parameters :
-| Parameter | Type | Description |
-| :-------- | :--: | :---------- |
-| `success` | `Boolean` | Validation si la requête s'est terminé sans problème où inversement |
-| `title` | `String` | Nom de l'erreur |
-| `status` | `Interger` | Le code http de la réponse |
-| `data` | `User` | Result de la requête |
-
-#### *Exemple de réponse*
-```js
-{
-  success : true,
-  title : "SUCCESS",
-  status : 200,
-  data : '[{"_id":"66b3af30ebbb97b1d38821f8","avatar":"/avatars/default.jpg","username":"camouille","bio":"Hi👋 Welcome To My Profile","followers":[],"following":[]}]'
-}
-```
-
 
 ------------
 ## About :

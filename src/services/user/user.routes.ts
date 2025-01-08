@@ -1,6 +1,6 @@
 import { 
-    searchAvatarUserById, 
-    getUserDetailsById, 
+    // searchAvatarUserById, 
+    // getUserDetailsById, 
     getAccountDetails, 
     // forgotPassword, 
     updatePassword, 
@@ -23,19 +23,13 @@ const router = express.Router();
 router.use(controleOrigine);
 router.use(LogRequest)
 
-const connect = express.Router();
-router.use("/sign/", connect);
-
-connect.route('/up')
+router.route('/sign/up')
 .post(signupUser);
-connect.route('/in')
+router.route('/sign/in')
 .post(loginUser); 
 
 
-const password = express.Router();
-router.use("/password", password)
-
-password.route('/')
+router.route('/password')
 .put(isAuth, updatePassword);
 // -- Bloqué temporairement le temps de créer le service mail -- //
 // password.route('/forgot')
@@ -45,28 +39,23 @@ password.route('/')
 // -- Bloqué temporairement le temps de créer le service mail -- //
 
 
-const me = express.Router()
-router.use("/@me", me)
-
-me.route('/')
+router.route('/@me')
 .post(isAuth, getAccountDetails)
 .put(isAuth, updateProfile)
 .delete(isAuth, deleteProfile);
-me.route('/avatar')
+router.route('/@me/avatar')
 .put(isAuth, imageFilter);
 // -- Supprimé temporairement car pour l'instant l'application n'a pas de "plateforme" pour la commu
 // me.route('/follow')
 // .post(isAuth, followUser);
 // -- Supprimé temporairement car pour l'instant l'application n'a pas de "plateforme" pour la commu
 
-
-const search = express.Router()
-router.use("/search", search)
-
-search.route("/user/profile/:id")
-.get(getUserDetailsById);
-search.route("/user/avatar/:id")
-.get(searchAvatarUserById);
+// -- Supprimé temporairement car pour l'instant l'application n'a pas de "plateforme" pour la commu
+// router.route("/search/user/profile/:id")
+// .get(getUserDetailsById);
+// router.route("/search/user/avatar/:id")
+// .get(searchAvatarUserById);
+// -- Supprimé temporairement car pour l'instant l'application n'a pas de "plateforme" pour la commu
 
 // -- Supprimé temporairement car pour l'instant l'application n'a pas de "plateforme" pour la commu
 // router.route("/suggested/users")
