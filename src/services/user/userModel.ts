@@ -35,7 +35,8 @@ const userSchema = new Schema({
     },
     bio: {
         type: String,
-        default: "Hi👋 Welcome To My Profile"
+        default: "Hi👋 Welcome To My Profile",
+        maxlength: [500, "Votre bio ne peut faire plus de 500 caractères."]
     },    
     followers: [
         {

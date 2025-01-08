@@ -6,7 +6,7 @@ import { existsSync } from "fs";
 import { NextFunction, Request, Response } from 'express';
 import { ResponseException, utils, middleware } from "packages";
 
-let { stringContraint, mongooseMessageErrorFormator, encodeUserToken } = utils
+let { stringContraint, mongooseMessageErrorFormator, encodeUserToken, isValidMongooseId } = utils
 
 let { catchSync } = middleware
 
@@ -31,7 +31,6 @@ export const signupUser = catchSync(async(req : Request, res : Response, next : 
         
         let response = JSON.stringify(toJsonUserProperty(validateCheck, token))
         throw new ResponseException(response).Success()
-
     }catch(e : any) {
         if(e.name === "ValidationError"){
             if(e.errors.email){
@@ -97,7 +96,7 @@ export const getAccountDetails = catchSync(async(req : any) => {
 // Get User Details By Id
 export const getUserDetailsById = catchSync(async(req : Request) => {
     const { id } : any = req.query
-    if (!id || (id && !id.match(/^[0-9a-fA-F]{24}$/))) throw new ResponseException('Identifiant recherché invalide').BadRequest()
+    if (!id || (id && isValidMongooseId(id))) throw new ResponseException('Identifiant recherché invalide').BadRequest()
 
     const user : any = await User.findById(id)
 
@@ -179,6 +178,8 @@ export const updateProfile = catchSync(async(req : any) => {
                 throw new ResponseException(mongooseMessageErrorFormator(e.errors.username.message, e.errors.username.value, "Username", "string")).BadRequest()
             }else if(e.errors.password){
                 throw new ResponseException(mongooseMessageErrorFormator(e.errors.password.message, e.errors.password.value, "Password", "string")).BadRequest()
+            }else if (e.errors.bio){
+                throw new ResponseException(mongooseMessageErrorFormator(e.errors.bio.message, e.errors.bio.value, "Bio", "string")).BadRequest()
             }
         }else if(e.name === 'MongoServerError' && e.code === 11000) {
             throw new ResponseException("Le pseudo ou l'email sont déjà existant").BadRequest()
@@ -334,7 +335,7 @@ export const resetPassword = catchSync(async(req : Request, res : Response, next
 // User Avatar Search
 export const searchAvatarUserById = catchSync(async(req : Request, res : Response) => {
     const { id } : any = req.query
-    if (!id || (id && !id.match(/^[0-9a-fA-F]{24}$/))) throw new ResponseException('Identifiant recherché invalide').BadRequest()
+    if (!id || (id && !isValidMongooseId(id))) throw new ResponseException('Identifiant recherché invalide').BadRequest()
 
     const user = await User.findById(id)
 
