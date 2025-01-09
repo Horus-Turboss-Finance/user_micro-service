@@ -1,6 +1,7 @@
 <div align="center">
   <h1>Cash Sight (user-service api documentation)</h1>
   <h6>Ce repository contien toutes les routes (et routines) du micro service utilisateur de Cash Sight.</h6>
+  <a href="https://github.com/Horus-Turboss-Finance/user_micro-service/issues"><img alt="Issues" src="https://img.shields.io/github/issues/Horus-Turboss-Finance/user_micro-service?style=for-the-badge" /></a>
 </div>
 
 ### Table des matières.
