@@ -53,7 +53,7 @@ const main = async () => {
 
             SignalAdressManager(
               {
-                service: serviceName.object.utilisateur,
+                service: serviceName.object.user,
                 adressIP: address.address,
                 port,
               },
