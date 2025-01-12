@@ -29,39 +29,25 @@ const main = async () => {
     const port = await FreePort();
 
     app.listen(port, env.IP_USER_SERVICE, () => {
-      const interfaces: NodeJS.Dict<NetworkInterfaceInfo[]> =
-        os.networkInterfaces();
-
       console.log("Connected to url :");
+      logSys.ServiceInfo(
+        inAppServiceName.app,
+        `connected to ${env.MACHINE_IP}:${port}`
+      );
 
-      for (const k in interfaces) {
-        for (const k2 in interfaces[k]) {
-          /* @ts-ignore */
-          const address = interfaces[k][k2];
+      console.log(`${env.MACHINE_IP}:${port}`);
 
-          if (address.family === "IPv4") {
-            logSys.ServiceInfo(
-              inAppServiceName.app,
-              `connected to ${address.address}:${port}`
-            );
-
-            console.log(`${address.address}:${port}`);
-
-            /*
-              CALL ADRESS MANAGER 
-            */
-
-            SignalAdressManager(
-              {
-                service: serviceName.object.user,
-                adressIP: address.address,
-                port,
-              },
-              env
-            );
-          }
-        }
-      }
+      /*
+        CALL ADRESS MANAGER 
+      */
+      SignalAdressManager(
+        {
+          service: serviceName.object.user,
+          adressIP: env.MACHINE_IP,
+          port,
+        },
+        env
+      );
     });
   } catch (e: any) {
     logSys.UnknowAppError(inAppServiceName.index, e);
