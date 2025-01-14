@@ -1,5 +1,5 @@
 import { 
-    // searchAvatarUserById, 
+    searchAvatarUserById, 
     // getUserDetailsById, 
     getAccountDetails, 
     // forgotPassword, 
@@ -65,6 +65,9 @@ router.route('/@me/avatar')
 // -- Disponible à la prochaine version -- //
 // router.route("/ban")
 // -- Disponible à la prochaine version -- //
+
+router.route("/avatars/:id")
+.get(searchAvatarUserById)
 
 router.route('/ping')
 .get(pingedByAd)

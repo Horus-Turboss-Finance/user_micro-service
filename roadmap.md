@@ -7,3 +7,4 @@
 - Laisser une possibilité de connexion latente de 30j lors d'une suppression de compte
 - Modifier l'url des avatars (tojsonuserproperty in usercontroller)
 - Email tuto
+- purger les pp inutilisé

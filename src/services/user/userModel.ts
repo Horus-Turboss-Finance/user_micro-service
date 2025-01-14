@@ -6,7 +6,7 @@ import { Schema, model } from 'mongoose';
 const userSchema = new Schema({
     avatar:  {
         type: String,
-        default: "/avatars/default.jpg"
+        default: "default.jpg"
     },
     email: { 
         type: String, 

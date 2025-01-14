@@ -50,9 +50,6 @@ app.use(fileUpload({
 */
 app.use("/", userRouter)
 
-app.use("/avatars", express.static(path.resolve(__dirname, './picture/default')))
-app.use("/avatars", express.static(path.resolve(__dirname, './picture/user')))
-
 /*
     ERROR 404
 */

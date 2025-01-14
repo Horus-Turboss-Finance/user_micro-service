@@ -176,7 +176,6 @@ POST /sign/up
 | Parameter | Type | Description |
 | :-------- | :--: | :---------- |
 | `success` | `Boolean` | Validation si la requête s'est terminé sans problème où inversement |
-| `title` | `String` | Nom de la réponse |
 | `status` | `Interger` | Le code http de la réponse |
 | `data` | `User` | Result de la requête |
 
@@ -225,7 +224,6 @@ POST /sign/in
 | Parameter | Type | Description |
 | :-------- | :--: | :---------- |
 | `success` | `Boolean` | Validation si la requête s'est terminé sans problème où inversement |
-| `title` | `String` | Nom de l'erreur |
 | `status` | `Interger` | Le code http de la réponse |
 | `data` | `User` | Result de la requête |
 
@@ -264,7 +262,7 @@ PUT /password
     // ...Code existant...//
     axios.request({
         url: '/password',
-        method: 'POST',
+        method: 'PUT',
         body: {
             trust : process.env.PASSWORD_SERVICE,
             oldPassword : input.confirmPassword,
@@ -280,7 +278,6 @@ PUT /password
 | Parameter | Type | Description |
 | :-------- | :--: | :---------- |
 | `success` | `Boolean` | Validation si la requête s'est terminé sans problème où inversement |
-| `title` | `String` | Nom de l'erreur |
 | `status` | `Interger` | Le code http de la réponse |
 | `data` | `User` | Result de la requête |
 
@@ -384,7 +381,6 @@ PUT /@me
 | Parameter | Type | Description |
 | :-------- | :--: | :---------- |
 | `success` | `Boolean` | Validation si la requête s'est terminé sans problème où inversement |
-| `title` | `String` | Nom de l'erreur |
 | `status` | `Interger` | Le code http de la réponse |
 | `data` | `User` | Result de la requête |
 
@@ -432,7 +428,6 @@ DELETE /@me
 | Parameter | Type | Description |
 | :-------- | :--: | :---------- |
 | `success` | `Boolean` | Validation si la requête s'est terminé sans problème où inversement |
-| `title` | `String` | Nom de l'erreur |
 | `status` | `Interger` | Le code http de la réponse |
 | `data` | `User` | Result de la requête |
 
@@ -485,7 +480,6 @@ PUT /@me/avatar
 | Parameter | Type | Description |
 | :-------- | :--: | :---------- |
 | `success` | `Boolean` | Validation si la requête s'est terminé sans problème où inversement |
-| `title` | `String` | Nom de l'erreur |
 | `status` | `Interger` | Le code http de la réponse |
 | `data` | `User` | Result de la requête |
 
@@ -520,7 +514,6 @@ GET /ping
 | Parameter | Type | Description |
 | :-------- | :--: | :---------- |
 | `success` | `Boolean` | Validation si la requête s'est terminé sans problème où inversement |
-| `title` | `String` | Nom de l'erreur |
 | `status` | `Interger` | Le code http de la réponse |
 | `data` | `User` | Result de la requête |
 

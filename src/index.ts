@@ -1,5 +1,4 @@
 import app from "./app";
-import os, { NetworkInterfaceInfo } from "os";
 import { params, utils, servicesConnexion } from "packages";
 
 const { FreePort } = utils;
@@ -29,13 +28,11 @@ const main = async () => {
     const port = await FreePort();
 
     app.listen(port, env.IP_USER_SERVICE, () => {
-      console.log("Connected to url :");
+      console.log(`Connected to ${env.MACHINE_IP}:${port}`);
       logSys.ServiceInfo(
         inAppServiceName.app,
         `connected to ${env.MACHINE_IP}:${port}`
       );
-
-      console.log(`${env.MACHINE_IP}:${port}`);
 
       /*
         CALL ADRESS MANAGER 

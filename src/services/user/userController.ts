@@ -192,7 +192,7 @@ export const updateProfile = catchSync(async(req : any) => {
 // Delete Profile  
 export const deleteProfile = catchSync(async(req : any, res : Response) => {
     let user = await User.findById(req.userID); 
-    if(!req.isValidToken || !user) throw new ResponseException("Connection requis").Unauthorized();
+    if(!req.isValidToken || !user) throw new ResponseException("Token Invalide").InvalidToken();
 
     const followers = user.followers;
     const following = user.following;
@@ -334,19 +334,20 @@ export const resetPassword = catchSync(async(req : Request, res : Response, next
 
 // User Avatar Search
 export const searchAvatarUserById = catchSync(async(req : Request, res : Response) => {
-    const { id } : any = req.query
+    let { id } : any = req.query
+    if(!id) id = req.params.id
+
     if (!id || (id && !isValidMongooseId(id))) throw new ResponseException('Identifiant recherché invalide').BadRequest()
 
     const user = await User.findById(id)
 
     if(!user) throw new ResponseException('Aucun utilisateur trouvé').NotFound();
 
-    if(user.avatar == "/avatars/default.jpg") return res.sendFile(path.resolve(__dirname, '../../../picture/default/default.jpg'));
+    if(user.avatar == "default.jpg") return res.sendFile(path.resolve(__dirname, '../../../picture/default.jpg'));
 
     let fileName = user.avatar
-    fileName = fileName.replace("/avatars/", "")
 
-    const pathFile = path.resolve(__dirname, '../../../picture/user/' + fileName)
+    const pathFile = path.resolve(__dirname, '../../../picture/' + fileName)
 
     /* le fichier n'existe pas */
     if(!existsSync(pathFile)) throw new ResponseException("Pas de photo de profile trouvé").NotFound()
@@ -363,23 +364,21 @@ const toJsonUserProperty = (user : any, token ?: string) => {
     let { avatar, username, bio, followers, following, _id } = user
 
     if(!token) return {
+        avatar : `https://cashsight.fr/api/v1/user/avatar/${avatar}`,
         followers,
         following,
         id : _id,
         username,
-        // avatar : `127.0.0.1:1000${avatar}`, TODO A MODIF + TARD
-        avatar : `http://127.0.0.1:1000${avatar}`,
         bio,
     }
 
 
     return {
+        avatar : `https://cashsight.fr/api/v1/user/avatar/${avatar}`,
         followers,
         following,
         id : _id,
         username,
-        // avatar : `127.0.0.1:1000${avatar}`, TODO A MODIF + TARD
-        avatar : `http://127.0.0.1:1000${avatar}`,
         token,
         bio,
     }
