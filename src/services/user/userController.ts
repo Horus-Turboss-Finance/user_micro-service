@@ -343,11 +343,11 @@ export const searchAvatarUserById = catchSync(async(req : Request, res : Respons
 
     if(!user) throw new ResponseException('Aucun utilisateur trouvé').NotFound();
 
-    if(user.avatar == "default.jpg") return res.sendFile(path.resolve(__dirname, '../../../picture/default.jpg'));
+    if(user.avatar == "default.jpg") return res.sendFile(path.resolve(__dirname, '../../../pictures/default.jpg'));
 
     let fileName = user.avatar
 
-    const pathFile = path.resolve(__dirname, '../../../picture/' + fileName)
+    const pathFile = path.resolve(__dirname, '../../../pictures/' + fileName)
 
     /* le fichier n'existe pas */
     if(!existsSync(pathFile)) throw new ResponseException("Pas de photo de profile trouvé").NotFound()

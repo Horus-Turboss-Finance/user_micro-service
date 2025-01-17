@@ -22,7 +22,7 @@ export const imageFilter = catchSync(async (req : any, res : Response, next : Ne
 
     if(!req.isValidToken) throw new ResponseException("Token invalide").InvalidToken();
 
-    let chemin = `${path.resolve("picture", image.name)}`
+    let chemin = `${path.resolve("pictures", image.name)}`
     if(fs.existsSync(chemin)){
         try{
             await fs.rmSync(chemin)

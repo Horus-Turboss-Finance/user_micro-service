@@ -136,4 +136,4 @@ log/*
 *.husky*
 commitlint.config.js
 nodemon.json
-jest.config.ts
+pictures/

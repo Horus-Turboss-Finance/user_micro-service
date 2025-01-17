@@ -95,6 +95,7 @@ npm install
 cd ./src
 mkdir log
 cd ../
+mkdir pictures
 ```
 
 **2. Créer les fichiers de configuration**
