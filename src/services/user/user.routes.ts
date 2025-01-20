@@ -10,7 +10,6 @@ import {
     // getAllUsers, 
     // followUser, 
     signupUser, 
-    pingedByAd,
     loginUser,
 } from './userController'
 import { imageFilter } from '../../middleware/imageFileFilter';
@@ -68,8 +67,5 @@ router.route('/@me/avatar')
 
 router.route("/avatars/:id")
 .get(searchAvatarUserById)
-
-router.route('/ping')
-.get(pingedByAd)
 
 export default router

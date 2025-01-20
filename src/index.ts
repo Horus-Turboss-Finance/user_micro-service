@@ -28,7 +28,7 @@ const main = async () => {
     const port = await FreePort();
 
     app.listen(port, env.IP_USER_SERVICE, () => {
-      console.log(`Connected to ${env.MACHINE_IP}:${port}`);
+      console.log(`Connected to ${env.IP_USER_SERVICE}:${port}`);
       logSys.ServiceInfo(
         inAppServiceName.app,
         `connected to ${env.MACHINE_IP}:${port}`

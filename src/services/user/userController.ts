@@ -85,7 +85,7 @@ export const loginUser = catchSync(async(req : Request, res : Response, next : N
 
 // Get User Details --Logged In User
 export const getAccountDetails = catchSync(async(req : any) => { 
-    let user = await User.findById(req.userID);
+    let user = await User.findById(req.userID).select("+email");
 
     if(!req.isValidToken) throw new ResponseException("Vous n'êtes pas autorisé à avoir cette information").Forbidden()
 
@@ -356,29 +356,27 @@ export const searchAvatarUserById = catchSync(async(req : Request, res : Respons
     res.sendFile(pathFile)
 });
 
-export const pingedByAd = catchSync(async(req : Request) =>{
-    throw new ResponseException("Service en ligne").Success()
-})
-
 const toJsonUserProperty = (user : any, token ?: string) => {
-    let { avatar, username, bio, followers, following, _id } = user
+    let { username, bio, followers, following, _id, email } = user
 
     if(!token) return {
-        avatar : `https://cashsight.fr/api/v1/user/avatar/${avatar}`,
+        avatar : `https://cashsight.fr/api/v1/user/avatar/${_id}`,
         followers,
         following,
         id : _id,
         username,
+        email,
         bio,
     }
 
 
     return {
-        avatar : `https://cashsight.fr/api/v1/user/avatar/${avatar}`,
+        avatar : `https://cashsight.fr/api/v1/user/avatar/${_id}`,
         followers,
         following,
         id : _id,
         username,
+        email,
         token,
         bio,
     }

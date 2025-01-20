@@ -48,7 +48,11 @@ app.use(fileUpload({
 /*
     API USER SERVICE
 */
+
 app.use("/", userRouter)
+app.get('/ping', catchSync(async()=> {
+    throw new ResponseException("Service en ligne").Success()
+}));
 
 /*
     ERROR 404
