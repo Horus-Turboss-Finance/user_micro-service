@@ -1,5 +1,6 @@
 import path from "path";
 import express from "express";
+import fileUpload from "express-fileupload";
 import { connectDatabase } from "./config/db";
 import userRouter from "./services/user/user.routes";
 import { ResponseException, log, middleware, params } from "packages";
@@ -31,6 +32,17 @@ connectDatabase(app)
 app.use(express.json())
 app.use(express.urlencoded({
     extended: true,
+}))
+app.use(fileUpload({
+    createParentPath: true,
+    abortOnLimit : true,
+    limitHandler : (req, res, next) => {
+        next(new ResponseException("Fichier trop volumineux.").BadRequest())
+    },
+    parseNested : true,
+    limits : { 
+        fileSize : 1024*1024*9,
+    },
 }))
 
 /*

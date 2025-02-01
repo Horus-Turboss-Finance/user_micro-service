@@ -43,7 +43,7 @@ router.route('/@me')
 .put(isAuth, updateProfile)
 .delete(isAuth, deleteProfile);
 router.route('/@me/avatar')
-.put(isAuth, imageFilter);
+.post(isAuth, imageFilter);
 // -- Supprimé temporairement car pour l'instant l'application n'a pas de "plateforme" pour la commu
 // me.route('/follow')
 // .post(isAuth, followUser);
