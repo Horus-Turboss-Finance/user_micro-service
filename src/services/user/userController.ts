@@ -122,19 +122,16 @@ export const getAllUsers = catchSync(async(req : any) => {
 
 // Update Password
 export const updatePassword = catchSync(async(req : any) => {
-    const { oldPassword, newPassword } = req.body;
+    const { password } = req.body;
 
-    const user : any = User.findById(req.userID);
+    const user : any = await User.findById(req.userID);
     if(!user) throw new ResponseException("Identifiant invalides").Unauthorized()
 
-    const isPasswordMatched = await user.comparePassword(oldPassword);
-
-    if (!isPasswordMatched) throw new ResponseException("Identifiant invalides").Unauthorized();
-    if(!stringContraint(newPassword, 4)) throw new ResponseException("Le mot de passe doit contenir au minimum 4 caractères.").BadRequest();
+    if(!stringContraint(password, 4)) throw new ResponseException("Le mot de passe doit contenir au minimum 4 caractères.").BadRequest();
 
     if(!req.isValidToken) throw new ResponseException("Vous n'êtes pas autorisé à modifier cette information").Forbidden();
 
-    user.password = newPassword;
+    user.password = password;
     await user.save();
     
     const token = await encodeUserToken(user._id);

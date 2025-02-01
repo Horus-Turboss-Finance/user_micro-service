@@ -50,12 +50,11 @@
   - [Update profil picture](#update-profil-picture)
     - [URL](#url-6)
     - [Request Parameters :](#request-parameters--6)
-    - [*Exemple de requête*](#exemple-de-requête-6)
     - [Response Parameters :](#response-parameters--6)
     - [*Exemple de réponse*](#exemple-de-réponse-6)
   - [PING SERVICE](#ping-service)
     - [URL](#url-7)
-    - [*Exemple de requête*](#exemple-de-requête-7)
+    - [*Exemple de requête*](#exemple-de-requête-6)
     - [Response Parameters :](#response-parameters--7)
     - [*Exemple de réponse*](#exemple-de-réponse-7)
 - [About :](#about-)
@@ -66,7 +65,6 @@
 - `@commitlint/config-conventional`  - configuration conventionnel de commitlint [^2]. 
 - `@types/bcryptjs` - Définitions des types du module bcryptjs [^3].
 - `@types/express` - Définitions des types du module express [^4].
-- `@types/express-fileupload` - Définitions des types du module express-fileupload [^5].
 - `@types/node` - Définitions des types du module nodejs [^6].
 - `@typescript-eslint/eslint-plugin` - Un plugin ESLint qui fournit des règles de contrôle pour les bases de code TypeScript [^7].
 - `@typescript-eslint/parser` - Un analyseur ESLint qui exploite TypeScript ESTree pour permettre à ESLint d'analyser le code source TypeScript [^8].
@@ -80,7 +78,6 @@
 - `axios` - packages pour les requêtes [^14].
 - `bcryptjs` - Optimisation de bcrypt en JavaScript avec zéro dépendance [^15].
 - `express` - Framework web minimaliste, rapide et sans opinion pour Node.js [^16].
-- `express-fileupload` - middleware express simple pour le téléchargement de fichiers [^17].
 - `mongoose` - Mongoose est un outil de modélisation d'objets MongoDB conçu pour fonctionner dans un environnement asynchrone [^18].
 - `packages` - fonctions et définitions partagé entre plusieurs services [^19].
 
@@ -257,8 +254,7 @@ PUT /password
 #### Request Parameters : 
 | Parameter     |   Type   |            Description            |
 | :------------ | :------: | :-------------------------------- |
-| `oldPassword` | `String` | Le mot de passe pour s'identifier |
-| `newPassword` | `String` | Le nouveau mdp pour s'identifier  |
+| `password` | `String` | Le nouveau mdp pour s'identifier  |
 | `token`       | `String` | Votre identifiant                 |
 
 #### *Exemple de requête*
@@ -270,8 +266,7 @@ PUT /password
         method: 'PUT',
         body: {
             trust : process.env.PASSWORD_SERVICE,
-            oldPassword : input.confirmPassword,
-            newPassword : input.Newpassword,
+            password : input.Newpassword,
             token : sessionStorage.token,
         },
     })
@@ -456,30 +451,13 @@ PUT /@me/avatar
 > \[Token\]  Required.
 
 #### Request Parameters : 
-| Parameter | Type     | Max     | Description |
+| Parameter | Type     | MaxSize | Description |
 | :-------- | :------: | :-----: | :---------- |
 | `token`   | `String` | &#9744; | Identifiant utilisateur |
-| `avatar`  | `File`   | `9Mb`   | Fichier img (png, jpg, jpeg, gif) only |
-
-#### *Exemple de requête*
-```js
-    let axios = require('axios')
-    let formData = new FormData();
-    let imagefile = document.querySelector('#file');
-    formData.append("image", imagefile.files[0]);
-    // ...Code existant...//
-    axios.request({
-        url: `/@me/avatar`,
-        method: 'POST',
-        body: {
-            trust : process.env.PASSWORD_SERVICE,
-            token : SessionStorage.token,
-        },
-        formData
-    })
-    .then(res => res.json())
-    .then(json => ...)
-```
+| `files` | `Object` | `9Mb`   | Fichier img (png, jpg, jpeg, gif) only |
+| `files.avatar` | `Object` | `9Mb`   | Fichier img (png, jpg, jpeg, gif) only |
+| `files.avatar[].name` | `String` | &#9744; | Nom du fichier |
+| `files.avatar[].data` | `Base64 string` | `9Mb` | Donnée en BASE64 de l'image | 
 
 #### Response Parameters :
 | Parameter | Type | Description |
@@ -540,7 +518,6 @@ Ref :
 [^2]: [Url du dépot `@commitlint/config-conventional`](https://www.npmjs.com/package/@commitlint/config-conventional)
 [^3]: [Url du dépot `@types/bcryptjs`](https://www.npmjs.com/package/@types/bcryptjs)
 [^4]: [Url du dépot `@types/express`](https://www.npmjs.com/package/@types/express)
-[^5]: [Url du dépot `@types/express-fileupload`](https://www.npmjs.com/package/@types/express-fileupload)
 [^6]: [Url du dépot `@types/node`](https://www.npmjs.com/package/@types/node)
 [^7]: [Url du dépot `@typescript-eslint/eslint-plugin`](https://www.npmjs.com/package/@typescript-eslint/eslint-plugin)
 [^8]: [Url du dépot `@typescript-eslint/parser`](https://www.npmjs.com/package/@typescript-eslint/parser)
@@ -552,6 +529,5 @@ Ref :
 [^14]: [Url du dépot `axios`](https://www.npmjs.com/package/axios)
 [^15]: [Url du dépot `bcryptjs`](https://www.npmjs.com/package/bcryptjs)
 [^16]: [Url du dépot `express`](https://www.npmjs.com/package/express)
-[^17]: [Url du dépot `express-fileupload`](https://www.npmjs.com/package/express-fileupload)
 [^18]: [Url du dépot `mongoose`](https://www.npmjs.com/package/mongoose)
 [^19]: [Url du dépot `packages`](https://github.com/Horus-Turboss-Finance/Packages/)

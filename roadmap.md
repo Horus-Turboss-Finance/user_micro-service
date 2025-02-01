@@ -8,3 +8,4 @@
 - Modifier l'url des avatars (tojsonuserproperty in usercontroller)
 - Email tuto
 - purger les pp inutilisé
+- Modifier la gestion du token pour gérer les ban et les changement critique user
