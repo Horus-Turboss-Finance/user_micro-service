@@ -9,3 +9,4 @@
 - Email tuto
 - purger les pp inutilisé
 - Modifier la gestion du token pour gérer les ban et les changement critique user
+  - Create a sys de check a token after then send (and if ban reject in api gateway)

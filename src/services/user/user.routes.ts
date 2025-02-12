@@ -42,6 +42,7 @@ router.route('/@me')
 .post(isAuth, getAccountDetails)
 .put(isAuth, updateProfile)
 .delete(isAuth, deleteProfile);
+
 router.route('/@me/avatar')
 .post(isAuth, imageFilter);
 // -- Supprimé temporairement car pour l'instant l'application n'a pas de "plateforme" pour la commu

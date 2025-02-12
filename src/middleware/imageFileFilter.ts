@@ -1,52 +1,66 @@
 import { ResponseException, middleware } from "packages";
 import { NextFunction, Response } from "express";
 import User from '../services/user/userModel';
+import { existsSync, readFile, unlink } from "fs";
+import Sharp from "sharp"
 import path from "path";
-import fs from "fs";
+import mime from "mime";
 
 const { catchSync } = middleware;
 
 export const imageFilter = catchSync(async (req : any, res : Response, next : NextFunction) => {
-    if (!req.files) throw new ResponseException("Aucun fichier fournit.").BadRequest();
+    if (!req.body.files) throw new ResponseException("Aucun fichier fournit.").BadRequest();
 
-    const { avatar } = req.files ?? 0;
-    const image: any = avatar; 
+    const { avatar } = req.body.files ?? 0;
+    let image: any = avatar; 
+
     if(!image) throw new ResponseException("Aucun avatar fournit").BadRequest()
 
-    const extensionName = path.extname(image.name)
+    const extensionName = path.extname(image)
     const allowedExtension = ['.png','.jpg','.jpeg', '.gif'];
 
-    if(!allowedExtension.includes(extensionName) || !image.mimetype.startsWith('image')) throw new ResponseException("Invalid image type").BadRequest();
+    let cheminApi = `${path.resolve("../files-tmp", image)}`;
+    let type = mime.getType(cheminApi);
 
-    image.name = `${req.userID}${path.parse(image.name).ext}`;
+    if(!type) throw new ResponseException("Une erreur est survenue").UnknownError()
+        
+    if(!allowedExtension.includes(extensionName) || !type.startsWith('image')) throw new ResponseException("Invalid image type").BadRequest();
+
+    image = `${req.userID}${path.parse(image).ext}`;
 
     if(!req.isValidToken) throw new ResponseException("Token invalide").InvalidToken();
 
-    let chemin = `${path.resolve("pictures", image.name)}`
-    if(fs.existsSync(chemin)){
-        try{
-            await fs.rmSync(chemin)
-        }catch(e){
-            console.log(e)
-        }
+    let chemin = `${path.resolve("pictures", image)}`;
+
+    if(existsSync(chemin)){
+        unlink(chemin, (err) => {(err? console.log(err) : "")})
     }
 
-    image.mv(chemin, async (err: Error) => {
-        if (err) return next(err)
-  
-        const newUserData = {
-            avatar : `${image.name}`
-        }
+    readFile(cheminApi, (err, data) => {
+        if(err) return next(err);
 
-        try{
-            await User.findByIdAndUpdate(req.userID, newUserData, {
-                runValidators: true,
-                useFindAndModify: true,
-            });
-            
-            next(new ResponseException("Photo de profil bien mis à jour.").OK())
-        }catch(e){
-            next(e)
-        }
+        Sharp(data, {
+            animated : true,
+            pages : -1
+        })
+        .resize(256, 256)
+        .toFile(chemin, async (err, info) => {
+            if(err) return next(err);
+
+            const newUserData = {
+                avatar : `${image}`
+            }
+    
+            try{
+                await User.findByIdAndUpdate(req.userID, newUserData, {
+                    runValidators : true,
+                    useFindAndModify : true
+                })
+    
+                next(new ResponseException("Photo de profil bien mis à jour.").OK())
+            }catch(e){
+                next(e)
+            }
+        })
     });
 })
